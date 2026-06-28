@@ -1,0 +1,9 @@
+[project]
+name = "f1championsprediction"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "jupyterlab>=4.6.0",
+    "matplotlib>=3.11.0",
+    "pandas>=3.0.4",
+]
