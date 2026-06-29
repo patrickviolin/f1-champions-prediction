@@ -340,6 +340,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "jupyterlab" },
     { name = "matplotlib" },
+    { name = "numpy" },
     { name = "pandas" },
 ]
 
@@ -347,6 +348,7 @@ dependencies = [
 requires-dist = [
     { name = "jupyterlab", specifier = ">=4.6.0" },
     { name = "matplotlib", specifier = ">=3.11.0" },
+    { name = "numpy", specifier = ">=2.5.0" },
     { name = "pandas", specifier = ">=3.0.4" },
 ]
 
