@@ -7,4 +7,6 @@ dependencies = [
     "matplotlib>=3.11.0",
     "numpy>=2.5.0",
     "pandas>=3.0.4",
+    "scikit-learn>=1.9.0",
+    "xgboost>=3.3.0",
 ]
