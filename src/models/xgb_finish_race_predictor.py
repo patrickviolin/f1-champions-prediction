@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from sklearn import metrics
 from xgboost import XGBClassifier
@@ -32,17 +33,27 @@ class XGBFinishRacePredictor(object):
         if self.X_train is None or self.X_test is None:
             raise ValueError("No training data. Run load_and_prepare_data first")
 
-        self.model.fit(X=self.X_train, y=self.y_train)
+        weights = np.where(self.y_train == 1, 1.0, 5.0)
+
+        self.model.fit(X=self.X_train, y=self.y_train, sample_weight=weights)
 
     def evaluate(self):
         """Evaluate the model on the test data and return the metrics"""
-        y_pred = self.model.predict(X=self.X_test)
+        y_proba = self.model.predict_proba(X=self.X_test)
 
-        report = metrics.classification_report(self.y_test, y_pred)
+        proba_dnf = y_proba[:, 0]
+
+        risk_threshold = 0.15
+
+        custom_y_pred = np.where(proba_dnf > risk_threshold, 0, 1)
+
+        report = metrics.classification_report(self.y_test, custom_y_pred)
+        conf_matrix = metrics.confusion_matrix(self.y_test, custom_y_pred)
 
         print('===== Evaluation: Finish the Race or DNF Prediction =====')
         print(report)
-        return report
+        print('===== Confusion Matrix: Finish the Race or DNF Prediction =====')
+        print(conf_matrix)
 
 
 if __name__ == '__main__':
