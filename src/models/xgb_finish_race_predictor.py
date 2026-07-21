@@ -20,8 +20,12 @@ class XGBFinishRacePredictor(object):
         categorical_cols = ['constructorId', 'circuitId']
 
         for col in categorical_cols:
-            self.X_train[col] = self.X_train[col].astype('category')
-            self.X_test[col] = self.X_test[col].astype('category')
+            all_categories = pd.concat([self.X_train[col], self.X_test[col]]).unique()
+
+            categorical_type = pd.CategoricalDtype(categories=all_categories, ordered=False)
+
+            self.X_train[col] = self.X_train[col].astype(categorical_type)
+            self.X_test[col] = self.X_test[col].astype(categorical_type)
 
     def train(self):
         """Train the model with the loaded data"""
@@ -39,6 +43,7 @@ class XGBFinishRacePredictor(object):
         print('===== Evaluation: Finish the Race or DNF Prediction =====')
         print(report)
         return report
+
 
 if __name__ == '__main__':
     predictor = XGBFinishRacePredictor()
