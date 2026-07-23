@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn import metrics
+from sklearn.model_selection import RandomizedSearchCV
 from xgboost import XGBClassifier
 
 
@@ -8,7 +9,8 @@ class XGBFinishRacePredictor(object):
     def __init__(self, data_dir='../../data/03_processed/'):
         """Init the model and variables"""
         self.data_dir = data_dir
-        self.model = XGBClassifier(enable_categorical=True, n_jobs=-1, random_state=42, device='cuda')
+        self.model = XGBClassifier(enable_categorical=True, n_jobs=-1, random_state=42, device='cuda',
+                                   subsample=0.5, scale_pos_weight=10, n_estimators=300, max_depth=10, learning_rate=0.2)
         self.X_train, self.X_test, self.y_train, self.y_test = None, None, None, None
 
     def load_and_prepare_data(self):
@@ -33,9 +35,45 @@ class XGBFinishRacePredictor(object):
         if self.X_train is None or self.X_test is None:
             raise ValueError("No training data. Run load_and_prepare_data first")
 
-        weights = np.where(self.y_train == 1, 1.0, 5.0)
+        self.model.fit(X=self.X_train, y=self.y_train)
 
-        self.model.fit(X=self.X_train, y=self.y_train, sample_weight=weights)
+    def tune_hyperparameters(self):
+        """Execute the search for the best hyperparameters"""
+
+        print("Start Tuning Hyperparameters")
+
+        param_grid = {
+            'max_depth': [2, 3, 4, 5, 8, 10],
+            'learning_rate': [0.01, 0.025, 0.05, 0.075, 0.1, 0.2],
+            'n_estimators': [100, 200, 300, 400, 500],
+            'subsample': [0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+            'scale_pos_weight': [2, 3, 5, 7, 10],
+        }
+
+        xgb_base = XGBClassifier(
+            enable_categorical=True,
+            n_jobs=-1,
+            random_state=42,
+            device='cuda'
+        )
+
+        random_search = RandomizedSearchCV(
+            estimator=xgb_base,
+            param_distributions=param_grid,
+            n_iter=50,
+            scoring='f1_macro',
+            cv=3,
+            verbose=2,
+            random_state=42,
+            n_jobs=-1,
+        )
+
+        random_search.fit(X=self.X_train, y=self.y_train)
+
+        print("\n ===== Best hyperparameters: =====")
+        print(random_search.best_params_)
+
+        self.model = random_search.best_estimator_
 
     def evaluate(self):
         """Evaluate the model on the test data and return the metrics"""
@@ -45,7 +83,7 @@ class XGBFinishRacePredictor(object):
 
         risk_threshold = 0.15
 
-        custom_y_pred = np.where(proba_dnf > risk_threshold, 0, 1)
+        custom_y_pred = np.where(proba_dnf > risk_threshold, 1, 0)
 
         report = metrics.classification_report(self.y_test, custom_y_pred)
         conf_matrix = metrics.confusion_matrix(self.y_test, custom_y_pred)
@@ -60,4 +98,5 @@ if __name__ == '__main__':
     predictor = XGBFinishRacePredictor()
     predictor.load_and_prepare_data()
     predictor.train()
+    # predictor.tune_hyperparameters()
     predictor.evaluate()
