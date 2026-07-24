@@ -26,12 +26,12 @@ class XGBFinishRacePredictor(object):
             raise ValueError("Training years do not align with X_train. Rebuild processed data before tuning.")
 
     def _get_scale_pos_weight(self):
-        """XGBoost positive class is now DNF, so weight DNF by finished/DNF ratio."""
+        """XGBoost positive class is mechanical DNF, so weight it by negative/positive ratio."""
         negative_count = np.count_nonzero(self.y_train == 0)
         positive_count = np.count_nonzero(self.y_train == 1)
 
         if positive_count == 0:
-            raise ValueError("No positive DNF examples found in y_train.")
+            raise ValueError("No positive mechanical DNF examples found in y_train.")
 
         return negative_count / positive_count
 
@@ -109,21 +109,21 @@ class XGBFinishRacePredictor(object):
         """Evaluate the model on the test data and return the metrics"""
         y_proba = self.model.predict_proba(X=self.x_test)
 
-        dnf_class_idx = np.nonzero(self.model.classes_ == 1)[0][0]
-        proba_dnf = y_proba[:, dnf_class_idx]
+        mechanical_dnf_class_idx = np.nonzero(self.model.classes_ == 1)[0][0]
+        proba_mechanical_dnf = y_proba[:, mechanical_dnf_class_idx]
 
         risk_threshold = 0.5
 
-        custom_y_pred = np.where(proba_dnf > risk_threshold, 1, 0)
+        custom_y_pred = np.where(proba_mechanical_dnf > risk_threshold, 1, 0)
 
         report = metrics.classification_report(self.y_test, custom_y_pred, zero_division=0)
         conf_matrix = metrics.confusion_matrix(self.y_test, custom_y_pred)
 
-        print(f'DNF average precision: {metrics.average_precision_score(self.y_test, proba_dnf):.4f}')
-        print(f'DNF ROC AUC: {metrics.roc_auc_score(self.y_test, proba_dnf):.4f}')
-        print('===== Evaluation: Finish the Race or DNF Prediction =====')
+        print(f'Mechanical DNF average precision: {metrics.average_precision_score(self.y_test, proba_mechanical_dnf):.4f}')
+        print(f'Mechanical DNF ROC AUC: {metrics.roc_auc_score(self.y_test, proba_mechanical_dnf):.4f}')
+        print('===== Evaluation: Mechanical DNF Prediction =====')
         print(report)
-        print('===== Confusion Matrix: Finish the Race or DNF Prediction =====')
+        print('===== Confusion Matrix: Mechanical DNF Prediction =====')
         print(conf_matrix)
 
 
