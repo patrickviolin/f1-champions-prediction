@@ -6,10 +6,14 @@ from sklearn.model_selection import ParameterSampler
 from xgboost import XGBRanker, plot_importance
 
 
-class XGBFinishRacePredictor(object):
+class XGBDriverPositionRankerPredictor(object):
     def __init__(self, data_dir='../../data/03_processed/'):
         """Init the model and variables"""
         self.data_dir = data_dir
+
+        self.objective = 'rank:ndcg'
+        self.eval_metric = 'ndcg'
+
         self.model = XGBRanker(
             enable_categorical=True,
             n_jobs=-1,
@@ -18,10 +22,12 @@ class XGBFinishRacePredictor(object):
             max_depth=4,
             min_child_weight=7,
             learning_rate=0.025,
-            n_estimators=200,
+            n_estimators=300,
             subsample=0.5,
             colsample_bytree=0.8,
-            reg_lambda=2.0
+            reg_lambda=2.0,
+            objective=self.objective,
+            eval_metric=self.eval_metric
         )
         self.x_train, self.x_test, self.y_train, self.y_test, self.qid_train, self.qid_test = None, None, None, None, None, None
         self.train_years = None
@@ -147,8 +153,8 @@ class XGBFinishRacePredictor(object):
                     n_jobs=-1,
                     random_state=42,
                     device='cuda',
-                    objective='rank:ndcg',
-                    eval_metric='ndcg',
+                    objective=self.objective,
+                    eval_metric=self.eval_metric,
                     **params,
                 )
 
@@ -195,8 +201,8 @@ class XGBFinishRacePredictor(object):
             n_jobs=-1,
             random_state=42,
             device='cuda',
-            objective='rank:ndcg',
-            eval_metric='ndcg',
+            objective=self.objective,
+            eval_metric=self.eval_metric,
             **best_params,
         )
 
@@ -242,7 +248,7 @@ class XGBFinishRacePredictor(object):
         print(f'NDCG Global Mean: {avg_ndcg:.4f} (From 0.0 to 1.0)')
         print('-' * 50)
 
-        race_example = results['race_id'].iloc[-1]
+        race_example = results['race_id'].iloc[np.random.randint(0, len(results) - 1)]
         race_table = results[results['race_id'] == race_example].copy()
 
         race_table = race_table.sort_values('predicted_relevance', ascending=False).reset_index(drop=True)
@@ -289,7 +295,7 @@ class XGBFinishRacePredictor(object):
 
 
 if __name__ == '__main__':
-    predictor = XGBFinishRacePredictor()
+    predictor = XGBDriverPositionRankerPredictor()
     predictor.load_and_prepare_data()
     predictor.train()
     # predictor.tune_hyperparameters()
