@@ -14,7 +14,7 @@ def load_x_and_y_data(self):
     self.y_test = pd.read_csv(f'{data_dir}/y_test.csv').squeeze('columns')
     self.train_years = pd.read_csv(f'{data_dir}/train_years.csv').squeeze('columns')
 
-    categorical_cols = ['constructorId', 'circuitId']
+    categorical_cols = ['constructorId', 'circuitId', 'driverId']
 
     for col in categorical_cols:
         all_categories = pd.concat([self.x_train[col], self.x_test[col]]).unique()
