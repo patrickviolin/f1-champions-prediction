@@ -5,6 +5,8 @@ from sklearn.metrics import ndcg_score
 from sklearn.model_selection import ParameterSampler
 from xgboost import XGBRanker, plot_importance
 
+from utils import get_chronological_cv, load_X_and_y
+
 
 class XGBDriverPositionRankerPredictor(object):
     def __init__(self, data_dir='../../data/03_processed/'):
@@ -34,51 +36,13 @@ class XGBDriverPositionRankerPredictor(object):
 
     def load_and_prepare_data(self):
         """Load train/test files already prepared by the notebooks."""
-        self.x_train = pd.read_csv(f'{self.data_dir}X_train.csv')
-        self.x_test = pd.read_csv(f'{self.data_dir}X_test.csv')
-        self.y_train = pd.read_csv(f'{self.data_dir}y_train.csv').squeeze('columns')
-        self.y_test = pd.read_csv(f'{self.data_dir}y_test.csv').squeeze('columns')
-        self.train_years = pd.read_csv(f'{self.data_dir}train_years.csv').squeeze('columns')
+        load_X_and_y(self)
+
         self.qid_train = pd.read_csv(f'{self.data_dir}qid_train.csv').squeeze('columns')
         self.qid_test = pd.read_csv(f'{self.data_dir}qid_test.csv').squeeze('columns')
 
         self.y_train = 25 - self.y_train
         self.y_test = 25 - self.y_test
-
-        categorical_cols = ['constructorId', 'circuitId']
-
-        for col in categorical_cols:
-            all_categories = pd.concat([self.x_train[col], self.x_test[col]]).unique()
-
-            categorical_type = pd.CategoricalDtype(categories=all_categories, ordered=False)
-
-            self.x_train[col] = self.x_train[col].astype(categorical_type)
-            self.x_test[col] = self.x_test[col].astype(categorical_type)
-
-        if len(self.train_years) != len(self.x_train):
-            raise ValueError("Training years do not align with X_train. Rebuild processed data before tuning.")
-
-    def _get_chronological_cv(self, validation_years=4):
-        """Expanding-window folds: train on past seasons, validate on one future season."""
-        if self.train_years is None:
-            raise ValueError("No training years available. Run load_and_prepare_data first.")
-
-        years = sorted(self.train_years.unique())
-        cv = []
-
-        for validation_year in years[-validation_years:]:
-            train_idx = self.train_years[self.train_years < validation_year].index.to_numpy()
-            validation_idx = self.train_years[self.train_years == validation_year].index.to_numpy()
-
-            if len(train_idx) == 0 or len(validation_idx) == 0:
-                continue
-
-            cv.append((train_idx, validation_idx))
-
-        if not cv:
-            raise ValueError("Could not build chronological CV folds.")
-
-        return cv
 
     @staticmethod
     def _mean_ndcg_by_race(y_true, y_score, qid):
@@ -123,7 +87,7 @@ class XGBDriverPositionRankerPredictor(object):
             'reg_lambda': [0.5, 1.0, 1.5, 2.0, 5.0],
         }
 
-        cv = self._get_chronological_cv()
+        cv = get_chronological_cv(self)
         sampled_params = list(ParameterSampler(
             param_distributions=param_grid,
             n_iter=n_iter,
