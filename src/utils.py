@@ -12,7 +12,7 @@ def load_x_and_y_data(self):
     self.y_train = pd.read_csv(f'{data_dir}/y_train.csv').squeeze('columns')
     self.x_test = pd.read_csv(f'{data_dir}/X_test.csv')
     self.y_test = pd.read_csv(f'{data_dir}/y_test.csv').squeeze('columns')
-    self.train_years = pd.read_csv(f'{data_dir}/train_years.csv').squeeze('columns')
+    self.year_train = pd.read_csv(f'{data_dir}/year_train.csv').squeeze('columns')
 
     categorical_cols = ['constructorId', 'circuitId', 'driverId']
 
@@ -24,7 +24,7 @@ def load_x_and_y_data(self):
         self.x_train[col] = self.x_train[col].astype(categorical_type)
         self.x_test[col] = self.x_test[col].astype(categorical_type)
 
-    if len(self.train_years) != len(self.x_train):
+    if len(self.year_train) != len(self.x_train):
         raise ValueError("Training years do not align with X_train. Rebuild processed data before training.")
 
 
@@ -79,15 +79,15 @@ def evaluate_xgboost(self):
 
 def get_chronological_cv(self, validation_years=4):
     """Expanding-window folds: train on past seasons, validate on one future season."""
-    if self.train_years is None:
+    if self.year_train is None:
         raise ValueError("No training years available. Run load_and_prepare_data first.")
 
-    years = sorted(self.train_years.unique())
+    years = sorted(self.year_train.unique())
     cv = []
 
     for validation_year in years[-validation_years:]:
-        train_idx = self.train_years[self.train_years < validation_year].index.to_numpy()
-        validation_idx = self.train_years[self.train_years == validation_year].index.to_numpy()
+        train_idx = self.year_train[self.year_train < validation_year].index.to_numpy()
+        validation_idx = self.year_train[self.year_train == validation_year].index.to_numpy()
 
         if len(train_idx) == 0 or len(validation_idx) == 0:
             continue

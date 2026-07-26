@@ -31,7 +31,7 @@ class XGBDriverPositionRankerPredictor(object):
             eval_metric=self.eval_metric
         )
         self.x_train, self.x_test, self.y_train, self.y_test, self.qid_train, self.qid_test = None, None, None, None, None, None
-        self.train_years = None
+        self.year_train = None
 
     def load_and_prepare_data(self):
         """Load train/test files already prepared by the notebooks."""

@@ -24,7 +24,7 @@ class XGBDriverPositionRegressorPredictor(object):
         )
         self.data_dir = data_dir
 
-        self.x_train, self.y_train, self.x_test, self.y_test, self.train_years = None, None, None, None, None
+        self.x_train, self.y_train, self.x_test, self.y_test, self.year_train = None, None, None, None, None
         self.qid_test = None
 
     def load_and_prepare_data(self):
