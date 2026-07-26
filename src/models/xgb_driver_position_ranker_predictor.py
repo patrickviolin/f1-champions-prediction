@@ -35,7 +35,7 @@ class XGBDriverPositionRankerPredictor(object):
 
     def load_and_prepare_data(self):
         """Load train/test files already prepared by the notebooks."""
-        utils.load_X_and_y(self)
+        utils.load_x_and_y_data(self)
 
         self.qid_train = pd.read_csv(f'{self.data_dir}qid_train.csv').squeeze('columns')
         self.qid_test = pd.read_csv(f'{self.data_dir}qid_test.csv').squeeze('columns')
@@ -181,59 +181,11 @@ class XGBDriverPositionRankerPredictor(object):
 
         return pd.DataFrame(search_results).sort_values('mean_ndcg', ascending=False)
 
-    def evaluate(self):
-        """Evaluate the model on the test data and return the metrics"""
-
-        if self.x_test is None or self.y_test is None:
-            raise ValueError("No test data. Run load_and_prepare_data first")
-
-        y_pred_scores = self.model.predict(self.x_test)
-
-        results = pd.DataFrame({
-            'race_id': self.qid_test,
-            'actual_relevance': self.y_test,
-            'predicted_relevance': y_pred_scores,
-        })
-
-        results['actual_position'] = 25 - results['actual_relevance']
-
-        ndcg_list = []
-        for race_id, group in results.groupby('race_id'):
-
-            if len(group) > 1:
-                score = ndcg_score([group['actual_relevance'].values], [group['predicted_relevance'].values])
-                ndcg_list.append(score)
-
-        avg_ndcg = np.mean(ndcg_list)
-
-        print('\n' + '=' * 50)
-        print('RANKING EVAL')
-        print('=' * 50)
-        print(f'NDCG Global Mean: {avg_ndcg:.4f} (From 0.0 to 1.0)')
-        print('-' * 50)
-
-        race_example = results['race_id'].iloc[np.random.randint(0, len(results) - 1)]
-        race_table = results[results['race_id'] == race_example].copy()
-
-        race_table = race_table.sort_values('predicted_relevance', ascending=False).reset_index(drop=True)
-        race_table['predicted_position'] = race_table.index + 1
-
-        print(f'\nRace Simulation (race_id: {race_example})')
-        print('Predicted | Real | Mathematical Score')
-        print('-' * 35)
-
-        for _, row in race_table.iterrows():
-            prev = int(row['predicted_position'])
-            real = int(row['actual_position'])
-            score = row['predicted_relevance']
-
-            print(f'{prev:^8} | {real:^4} | {score:>.4f}')
-
 
 if __name__ == '__main__':
     predictor = XGBDriverPositionRankerPredictor()
     predictor.load_and_prepare_data()
     predictor.train()
     # predictor.tune_hyperparameters()
-    predictor.evaluate()
+    utils.evaluate_xgboost(predictor)
     utils.show_feature_importance(predictor)

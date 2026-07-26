@@ -1,9 +1,11 @@
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from sklearn.metrics import ndcg_score
 from xgboost import plot_importance
 
 
-def load_X_and_y(self):
+def load_x_and_y_data(self):
     data_dir = self.data_dir
 
     self.x_train = pd.read_csv(f'{data_dir}/X_train.csv')
@@ -24,6 +26,55 @@ def load_X_and_y(self):
 
     if len(self.train_years) != len(self.x_train):
         raise ValueError("Training years do not align with X_train. Rebuild processed data before training.")
+
+
+def evaluate_xgboost(self):
+    if self.x_test is None or self.y_test is None:
+        raise ValueError("No test data. Run load_and_prepare_data first")
+
+    y_pred_scores = self.model.predict(self.x_test)
+
+    results = pd.DataFrame({
+        'race_id': self.qid_test,
+        'actual_relevance': self.y_test,
+        'predicted_relevance': y_pred_scores,
+    })
+
+    results['actual_position'] = 25 - results['actual_relevance']
+
+    ndcg_list = []
+    for race_id, group in results.groupby('race_id'):
+
+        if len(group) > 1:
+            score = ndcg_score([group['actual_relevance'].values], [group['predicted_relevance'].values])
+            ndcg_list.append(score)
+
+    avg_ndcg = np.mean(ndcg_list)
+
+    print('\n' + '=' * 50)
+    print('RANKING EVAL')
+    print('=' * 50)
+    print(f'NDCG Global Mean: {avg_ndcg:.4f} (From 0.0 to 1.0)')
+    print('-' * 50)
+
+    rng = np.random.default_rng(42)
+
+    race_example = results['race_id'].iloc[rng.integers(0, len(results))]
+    race_table = results[results['race_id'] == race_example].copy()
+
+    race_table = race_table.sort_values('predicted_relevance', ascending=False).reset_index(drop=True)
+    race_table['predicted_position'] = race_table.index + 1
+
+    print(f'\nRace Simulation (race_id: {race_example})')
+    print('Predicted | Real | Mathematical Score')
+    print('-' * 35)
+
+    for _, row in race_table.iterrows():
+        prev = int(row['predicted_position'])
+        real = int(row['actual_position'])
+        score = row['predicted_relevance']
+
+        print(f'{prev:^8} | {real:^4} | {score:>.4f}')
 
 
 def get_chronological_cv(self, validation_years=4):
