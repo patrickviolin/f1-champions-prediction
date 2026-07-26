@@ -1,4 +1,6 @@
 import pandas as pd
+from matplotlib import pyplot as plt
+from xgboost import plot_importance
 
 
 def load_X_and_y(self):
@@ -45,3 +47,32 @@ def get_chronological_cv(self, validation_years=4):
         raise ValueError("Could not build chronological CV folds.")
 
     return cv
+
+
+def show_feature_importance(self):
+    """Extracts and plot the importance of trained model features."""
+
+    if self.model is None:
+        raise ValueError("The model was still not trained. Run train() first.")
+
+    print('\n' + '=' * 50)
+    print('GENERATING FEATURE IMPORTANCE PLOT')
+    print('=' * 50)
+
+    # Criamos o quadro da figura
+    _, ax = plt.subplots(figsize=(12, 8))
+
+    # importance_type='gain' is the most reliable metric
+    plot_importance(
+        self.model,
+        ax=ax,
+        importance_type='gain',
+        max_num_features=20,  # Show Top 20
+        height=0.6,
+        title='F1 Feature Importance (Metric: Gain)',
+        xlabel='Average Information Gain',
+        ylabel='Variables (Features)'
+    )
+
+    plt.tight_layout()
+    plt.show()

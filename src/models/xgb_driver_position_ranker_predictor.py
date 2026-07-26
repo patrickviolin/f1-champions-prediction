@@ -1,11 +1,10 @@
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
 from sklearn.metrics import ndcg_score
 from sklearn.model_selection import ParameterSampler
-from xgboost import XGBRanker, plot_importance
+from xgboost import XGBRanker
 
-from utils import get_chronological_cv, load_X_and_y
+import utils
 
 
 class XGBDriverPositionRankerPredictor(object):
@@ -36,7 +35,7 @@ class XGBDriverPositionRankerPredictor(object):
 
     def load_and_prepare_data(self):
         """Load train/test files already prepared by the notebooks."""
-        load_X_and_y(self)
+        utils.load_X_and_y(self)
 
         self.qid_train = pd.read_csv(f'{self.data_dir}qid_train.csv').squeeze('columns')
         self.qid_test = pd.read_csv(f'{self.data_dir}qid_test.csv').squeeze('columns')
@@ -69,8 +68,9 @@ class XGBDriverPositionRankerPredictor(object):
         if self.x_train is None or self.x_test is None:
             raise ValueError("No training data. Run load_and_prepare_data first")
 
-        self.model.fit(X=self.x_train, y=self.y_train, qid=self.qid_train, eval_qid=[self.qid_test],
-                       eval_set=[(self.x_test, self.y_test)])
+        self.model.fit(X=self.x_train, y=self.y_train, qid=self.qid_train,
+                       eval_qid=[self.qid_test], eval_set=[(self.x_test, self.y_test)],
+                       verbose=False)
 
     def tune_hyperparameters(self, n_iter=50):
         """Tune XGBRanker with chronological CV and per-race NDCG scoring."""
@@ -87,7 +87,7 @@ class XGBDriverPositionRankerPredictor(object):
             'reg_lambda': [0.5, 1.0, 1.5, 2.0, 5.0],
         }
 
-        cv = get_chronological_cv(self)
+        cv = utils.get_chronological_cv(self)
         sampled_params = list(ParameterSampler(
             param_distributions=param_grid,
             n_iter=n_iter,
@@ -229,34 +229,6 @@ class XGBDriverPositionRankerPredictor(object):
 
             print(f'{prev:^8} | {real:^4} | {score:>.4f}')
 
-    def show_feature_importance(self):
-        """Extracts and plot the importance of trained model features."""
-
-        if self.model is None:
-            raise ValueError("The model was still not trained. Run train() first.")
-
-        print('\n' + '=' * 50)
-        print('GENERATING FEATURE IMPORTANCE PLOT')
-        print('=' * 50)
-
-        # Criamos o quadro da figura
-        _, ax = plt.subplots(figsize=(12, 8))
-
-        # importance_type='gain' is the most reliable metric
-        plot_importance(
-            self.model,
-            ax=ax,
-            importance_type='gain',
-            max_num_features=20,  # Show Top 20
-            height=0.6,
-            title='F1 Feature Importance (Metric: Gain)',
-            xlabel='Average Information Gain',
-            ylabel='Variables (Features)'
-        )
-
-        plt.tight_layout()
-        plt.show()
-
 
 if __name__ == '__main__':
     predictor = XGBDriverPositionRankerPredictor()
@@ -264,4 +236,4 @@ if __name__ == '__main__':
     predictor.train()
     # predictor.tune_hyperparameters()
     predictor.evaluate()
-    predictor.show_feature_importance()
+    utils.show_feature_importance(predictor)
