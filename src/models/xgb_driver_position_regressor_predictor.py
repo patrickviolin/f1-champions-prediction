@@ -91,3 +91,4 @@ if __name__ == '__main__':
     # predictor.tune_hyperparameters()
     utils.evaluate_xgboost(predictor)
     utils.show_feature_importance(predictor)
+    utils.save_model(predictor, file_name='xgb_regressor_model.json')

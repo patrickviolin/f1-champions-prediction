@@ -4,7 +4,7 @@ from models.xgb_driver_position_ranker_predictor import XGBDriverPositionRankerP
 
 
 class F1ChampionshipSimulator:
-    def __init__(self, target_year=2023):
+    def __init__(self, target_year=2024):
         self.target_year = target_year
 
         self.points_system = {1: 25, 2: 18, 3: 15, 4: 12, 5: 10, 6: 8, 7: 6, 8: 4, 9: 2, 10: 1}

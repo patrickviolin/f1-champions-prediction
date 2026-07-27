@@ -127,3 +127,15 @@ def show_feature_importance(self):
 
     plt.tight_layout()
     plt.show()
+
+
+def save_model(self, file_name):
+    """Save the model"""
+    if self.model is None:
+        raise ValueError("No model has been trained")
+
+    model_dir = '../../models/'
+    file_path = model_dir + file_name
+
+    self.model.save_model(file_path)
+    print(f'Model saved in {file_path}')
