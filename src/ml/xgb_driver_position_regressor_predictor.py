@@ -2,8 +2,7 @@ import pandas as pd
 from sklearn.model_selection import RandomizedSearchCV
 from xgboost import XGBRegressor
 
-import utils
-from utils import load_x_and_y_data
+import utils.utils as utils
 
 
 class XGBDriverPositionRegressorPredictor(object):
@@ -29,7 +28,7 @@ class XGBDriverPositionRegressorPredictor(object):
 
     def load_and_prepare_data(self):
         """Load train/test data used for training and testing"""
-        load_x_and_y_data(self)
+        utils.load_x_and_y_data(self)
 
         # Keeping QID test to sort the ranking on evaluate
         self.qid_test = pd.read_csv(self.data_dir + 'qid_test.csv').squeeze('columns')

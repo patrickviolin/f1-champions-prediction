@@ -4,7 +4,7 @@ from sklearn.metrics import ndcg_score
 from sklearn.model_selection import ParameterSampler
 from xgboost import XGBRanker
 
-import utils
+import utils.utils as utils
 
 
 class XGBDriverPositionRankerPredictor(object):

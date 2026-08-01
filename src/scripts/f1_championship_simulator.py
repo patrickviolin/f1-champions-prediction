@@ -1,6 +1,6 @@
 import pandas as pd
 
-from models.xgb_driver_position_ranker_predictor import XGBDriverPositionRankerPredictor
+from ml.xgb_driver_position_ranker_predictor import XGBDriverPositionRankerPredictor
 
 
 class F1ChampionshipSimulator:
