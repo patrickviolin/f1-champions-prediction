@@ -11,10 +11,11 @@ router = APIRouter(
 )
 
 
-@router.post('/race', response_model=RacePredictionResponse)
+@router.post('/race', response_model=RacePredictionResponse,
+             responses={500: {"description": "Internal server error when predicting"}})
 async def predict_race(
         request: RacePredictionRequest,
-        model_type: Annotated[str, Query('ranker', description="Choose a model: 'ranker'  or 'regressor'")]
+        model_type: Annotated[str, Query(description="Choose a model: 'ranker'  or 'regressor'")] = 'ranker'
 ):
     """
     Receive grid start data, driver and circuit stats
