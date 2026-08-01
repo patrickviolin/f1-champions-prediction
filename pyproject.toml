@@ -11,5 +11,6 @@ dependencies = [
     "pandas-stubs~=3.0.5",
     "pydantic>=2.13.4",
     "scikit-learn>=1.9.0",
+    "uvicorn>=0.52.0",
     "xgboost>=3.3.0",
 ]
