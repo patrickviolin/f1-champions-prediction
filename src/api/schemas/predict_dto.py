@@ -25,6 +25,7 @@ class DriverRaceData(BaseModel):
     q3_millis: float
     reached_q3: bool
 
+    constructor_id: int
     constructor_momentum: float
     constructor_track_affinity: float
     constructor_dnf_rate: float
