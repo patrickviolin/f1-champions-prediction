@@ -3,10 +3,13 @@ name = "f1championsprediction"
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
+    "fastapi>=0.141.1",
     "jupyterlab>=4.6.0",
     "matplotlib>=3.11.0",
     "numpy>=2.5.1",
     "pandas>=3.0.5",
+    "pandas-stubs~=3.0.5",
+    "pydantic>=2.13.4",
     "scikit-learn>=1.9.0",
     "xgboost>=3.3.0",
 ]
