@@ -4,7 +4,7 @@ from sklearn.metrics import ndcg_score
 from sklearn.model_selection import ParameterSampler
 from xgboost import XGBRanker
 
-import utils
+import utils.utils as utils
 
 
 class XGBDriverPositionRankerPredictor(object):
@@ -31,7 +31,7 @@ class XGBDriverPositionRankerPredictor(object):
             eval_metric=self.eval_metric
         )
         self.x_train, self.x_test, self.y_train, self.y_test, self.qid_train, self.qid_test = None, None, None, None, None, None
-        self.train_years = None
+        self.year_train = None
 
     def load_and_prepare_data(self):
         """Load train/test files already prepared by the notebooks."""
@@ -189,3 +189,4 @@ if __name__ == '__main__':
     # predictor.tune_hyperparameters()
     utils.evaluate_xgboost(predictor)
     utils.show_feature_importance(predictor)
+    utils.save_model(predictor, file_name='xgb_ranker_model.json')
