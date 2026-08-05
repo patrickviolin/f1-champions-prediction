@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -25,13 +25,13 @@ class DriverRaceData(BaseModel):
     q3_millis: float
     reached_q3: bool
 
-    constructor_id: int
+    constructor_id: Optional[int] = None
     constructor_momentum: float
     constructor_track_affinity: float
     constructor_dnf_rate: float
 
     round: int
-    circuit_id: int
+    circuit_id: Optional[int] = None
     circuit_dnf_rate: float
 
 
