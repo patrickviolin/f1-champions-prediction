@@ -8,7 +8,7 @@ import utils.utils as utils
 
 
 class XGBDriverPositionRankerPredictor(object):
-    def __init__(self, data_dir='../../data/03_processed/'):
+    def __init__(self, data_dir='../../train_and_test_data/03_processed'):
         """Init the model and variables"""
         self.data_dir = data_dir
 
@@ -37,8 +37,8 @@ class XGBDriverPositionRankerPredictor(object):
         """Load train/test files already prepared by the notebooks."""
         utils.load_x_and_y_data(self)
 
-        self.qid_train = pd.read_csv(f'{self.data_dir}qid_train.csv').squeeze('columns')
-        self.qid_test = pd.read_csv(f'{self.data_dir}qid_test.csv').squeeze('columns')
+        self.qid_train = pd.read_csv(f'{self.data_dir}/qid_train.csv').squeeze('columns')
+        self.qid_test = pd.read_csv(f'{self.data_dir}/qid_test.csv').squeeze('columns')
 
         self.y_train = 25 - self.y_train
         self.y_test = 25 - self.y_test

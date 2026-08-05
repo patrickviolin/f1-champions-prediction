@@ -6,7 +6,7 @@ import utils.utils as utils
 
 
 class XGBDriverPositionRegressorPredictor(object):
-    def __init__(self, data_dir='../../data/03_processed/'):
+    def __init__(self, data_dir='../../train_and_test_data/03_processed/'):
         """Init the model and variables"""
         self.model = XGBRegressor(
             random_state=42,
@@ -31,7 +31,7 @@ class XGBDriverPositionRegressorPredictor(object):
         utils.load_x_and_y_data(self)
 
         # Keeping QID test to sort the ranking on evaluate
-        self.qid_test = pd.read_csv(self.data_dir + 'qid_test.csv').squeeze('columns')
+        self.qid_test = pd.read_csv(self.data_dir + '/qid_test.csv').squeeze('columns')
 
         # Keeping the same logic of ranker to ease comparing with ranker
         self.y_train = 25 - self.y_train

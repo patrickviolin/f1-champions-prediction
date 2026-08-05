@@ -76,3 +76,4 @@ circuitId,circuitRef,name,location,country,lat,lng,alt,url
 77,"jeddah","Jeddah Corniche Circuit","Jeddah","Saudi Arabia",21.6319,39.1044,15,"http://en.wikipedia.org/wiki/Jeddah_Street_Circuit"
 78,"losail","Losail International Circuit","Al Daayen","Qatar",25.49,51.4542,12,"http://en.wikipedia.org/wiki/Losail_International_Circuit"
 79,"miami","Miami International Autodrome","Miami","USA",25.9581,-80.2389,0,"http://en.wikipedia.org/wiki/Miami_International_Autodrome"
+81,madring,Circuito de Madring,Madrid,Spain,40.465278,-3.615278,697,https://en.wikipedia.org/wiki/Madring

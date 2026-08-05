@@ -13,7 +13,7 @@ class F1ChampionshipSimulator:
         self.predictor.load_and_prepare_data()
         self.predictor.train()
 
-        data_dir = '../../data/03_processed/'
+        data_dir = '../../train_and_test_data/03_processed/'
 
         self.driver_test = pd.read_csv(f'{data_dir}driver_test.csv').squeeze('columns')
         self.year_test = pd.read_csv(f'{data_dir}year_test.csv').squeeze('columns')
@@ -24,7 +24,7 @@ class F1ChampionshipSimulator:
 
         y_pred_scores = self.predictor.model.predict(self.predictor.x_test)
 
-        drivers = pd.read_csv('../../data/01_raw/drivers.csv')
+        drivers = pd.read_csv('../../train_and_test_data/01_raw/drivers.csv')
 
         drivers = drivers[['driverId', 'driverRef']]
 

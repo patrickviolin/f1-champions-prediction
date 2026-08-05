@@ -1,0 +1,42 @@
+{
+  "circuits": {
+    "melbourne": 1,
+    "shanghai": 17,
+    "suzuka": 22,
+    "bahrain": 3,
+    "jeddah": 77,
+    "miami": 79,
+    "imola": 21,
+    "montreal": 7,
+    "monaco": 6,
+    "catalunya": 4,
+    "spielberg": 70,
+    "silverstone": 9,
+    "spa-francorchamps": 13,
+    "hungaroring": 11,
+    "zandvoort": 39,
+    "monza": 14,
+    "madring": 81,
+    "baku": 73,
+    "marina-bay": 15,
+    "austin": 69,
+    "mexico-city": 32,
+    "interlagos": 18,
+    "las-vegas": 80,
+    "lusail": 78,
+    "yas-marina": 24
+  },
+  "constructors": {
+    "mclaren": 1,
+    "ferrari": 6,
+    "red-bull": 9,
+    "mercedes": 131,
+    "aston-martin": 117,
+    "alpine": 214,
+    "haas": 210,
+    "williams": 3,
+    "kick-sauber": 15,
+    "audi": 15,
+    "racing-bulls": 215
+  }
+}
