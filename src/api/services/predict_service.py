@@ -37,6 +37,10 @@ class PredictService:
         categorical_cols = ['constructorId', 'circuitId']
         for col in categorical_cols:
             if col in df_features.columns:
+                raw_list = [int(val) if pd.notna(val) else None for val in df_features[col]]
+
+                df_features[col] = pd.Series(raw_list, index=df_features.index, dtype=object)
+
                 df_features[col] = df_features[col].astype('category')
 
         expected_order = [
