@@ -1,3 +1,4 @@
+from datetime import date
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -40,6 +41,11 @@ class RacePredictionRequest(BaseModel):
 
     race_name: str = Field(..., description='Name or ID of the race')
     grid_data: List[DriverRaceData] = Field(..., description='List of all 20 drivers race data')
+
+
+class RacePredictionByDateRequest(BaseModel):
+    """Main class used by the API to predict a race results using only a specific date"""
+    race_date: date
 
 
 # ==========================================

@@ -3,6 +3,36 @@ import json
 import requests
 
 
+def setup_api_response(url, payload):
+    headers = {
+        "Content-Type": "application/json",
+    }
+
+    print('=' * 50)
+    print('TEST 1: INFERENCE WITH XGBREGRESSOR')
+    print('=' * 50)
+
+    response_regressor = requests.post(f"{url}?model_type=regressor", json=payload, headers=headers)
+
+    if response_regressor.status_code == 200:
+        print(json.dumps(response_regressor.json(), indent=4, ensure_ascii=False))
+    else:
+        print(
+            f"Error {response_regressor.status_code}: \n{json.dumps(response_regressor.json(), indent=4, ensure_ascii=False)}")
+
+    print('\n' + '=' * 50)
+    print('TEST 2: INFERENCE WITH XGBRANKER')
+    print('=' * 50)
+
+    response_ranker = requests.post(f"{url}?model_type=ranker", json=payload, headers=headers)
+
+    if response_ranker.status_code == 200:
+        print(json.dumps(response_ranker.json(), indent=4, ensure_ascii=False))
+    else:
+        print(
+            f"Error {response_ranker.status_code}: \n{json.dumps(response_ranker.json(), indent=4, ensure_ascii=False)}")
+
+
 def test_prediction_endpoint():
     url = 'http://localhost:8000/api/v1/predict/race'
 
@@ -56,32 +86,18 @@ def test_prediction_endpoint():
         ]
     }
 
-    headers = {
-        "Content-Type": "application/json",
+    setup_api_response(url, payload)
+
+
+def test_prediction_by_race_date_endpoint():
+    url = 'http://localhost:8000/api/v1/predict/race-by-date'
+
+    payload = {
+        "race_date": '2025-12-07'
     }
 
-    print('=' * 50)
-    print('TEST 1: INFERENCE WITH XGBREGRESSOR')
-    print('=' * 50)
-
-    response_regressor = requests.post(f"{url}?model_type=regressor", json=payload, headers=headers)
-
-    if response_regressor.status_code == 200:
-        print(json.dumps(response_regressor.json(), indent=4, ensure_ascii=False))
-    else:
-        print(f"Error {response_regressor.status_code}: \n{json.dumps(response_regressor.json(), indent=4, ensure_ascii=False)}")
-
-    print('\n' + '=' * 50)
-    print('TEST 2: INFERENCE WITH XGBRANKER')
-    print('=' * 50)
-
-    response_ranker = requests.post(f"{url}?model_type=ranker", json=payload, headers=headers)
-
-    if response_ranker.status_code == 200:
-        print(json.dumps(response_ranker.json(), indent=4, ensure_ascii=False))
-    else:
-        print(            f"Error {response_ranker.status_code}: \n{json.dumps(response_ranker.json(), indent=4, ensure_ascii=False)}")
+    setup_api_response(url, payload)
 
 
 if __name__ == '__main__':
-    test_prediction_endpoint()
+    test_prediction_by_race_date_endpoint()

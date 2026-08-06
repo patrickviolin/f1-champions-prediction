@@ -3,7 +3,9 @@ from pathlib import Path
 import pandas as pd
 from xgboost import XGBRanker, XGBRegressor
 
-from api.schemas.predict_dto import RacePredictionRequest, RacePredictionResponse, DriverPrediction
+from api.schemas.predict_dto import RacePredictionRequest, RacePredictionResponse, DriverPrediction, \
+    RacePredictionByDateRequest
+from utils import api_utils
 
 
 class PredictService:
@@ -18,6 +20,18 @@ class PredictService:
 
         self.ranker_model = XGBRanker()
         self.ranker_model.load_model(ranker_path)
+
+    def execute_prediction_by_race_date(self, request: RacePredictionByDateRequest, model_type: str) -> RacePredictionResponse:
+        """
+        Execute the prediction request using only the race date. Since the ML model was trained with data until 2024,
+        only races from 2025 onwards should be used.
+        :param request: RacePredictionByDateRequest
+        :param model_type: regressor or ranker
+        :return:RacePredictionResponse
+        """
+        race_full_data = api_utils.transform_f1db_data_to_api_schema(request.race_date)
+
+        return self.execute_prediction(race_full_data, model_type)
 
     def execute_prediction(self, request: RacePredictionRequest, model_type: str) -> RacePredictionResponse:
         """
