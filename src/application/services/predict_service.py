@@ -5,7 +5,7 @@ from xgboost import XGBRanker, XGBRegressor
 
 from api.schemas.predict_dto import RacePredictionRequest, RacePredictionResponse, DriverPrediction, \
     RacePredictionByDateRequest
-from utils import api_utils
+from application.services.f1db_data_to_ml_schema import F1DbDataToMlSchema
 
 
 class PredictService:
@@ -21,6 +21,8 @@ class PredictService:
         self.ranker_model = XGBRanker()
         self.ranker_model.load_model(ranker_path)
 
+        self.f1db_data_to_ml_schema = F1DbDataToMlSchema.create_default()
+
     def execute_prediction_by_race_date(self, request: RacePredictionByDateRequest, model_type: str) -> RacePredictionResponse:
         """
         Execute the prediction request using only the race date. Since the ML model was trained with data until 2024,
@@ -29,7 +31,7 @@ class PredictService:
         :param model_type: regressor or ranker
         :return:RacePredictionResponse
         """
-        race_full_data = api_utils.transform_f1db_data_to_api_schema(request.race_date)
+        race_full_data = self.f1db_data_to_ml_schema.build_request(request.race_date)
 
         return self.execute_prediction(race_full_data, model_type)
 
