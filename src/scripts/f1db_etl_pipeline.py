@@ -2,7 +2,7 @@ import json
 
 import requests
 
-from utils import api_utils
+from application.services.f1db_data_to_ml_schema import F1DbDataToMlSchema
 
 
 class F1DbEtlPipeline:
@@ -14,12 +14,13 @@ if __name__ == '__main__':
     f1db_pipeline = F1DbEtlPipeline()
     # f1db_pipeline.fetch_and_extract_raw_data()
 
-    print("Iniciando transformação de dados...")
-    request_dto = api_utils.transform_f1db_data_to_api_schema(race_date='2026-07-26')
+    print("Starting data transformation")
+    f1db_data_to_ml_schema = F1DbDataToMlSchema.create_default()
+    request_dto = f1db_data_to_ml_schema.build_request(race_date='2026-07-26')
 
     payload_json = request_dto.model_dump()
 
-    print("Disparando requisição contra a API...")
+    print("Requesting to API")
     response = requests.post(
         f"{f1db_pipeline.api_url}?model_type=ranker",
         json=payload_json,
@@ -27,8 +28,8 @@ if __name__ == '__main__':
     )
 
     if response.status_code == 200:
-        print("Predição concluída!")
+        print("Prediction successful!")
         print(json.dumps(response.json(), indent=4, ensure_ascii=False))
     else:
-        print(f"Erro na API: {response.status_code}")
+        print(f"Error: {response.status_code}")
         print(response.text)

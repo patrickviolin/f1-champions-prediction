@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query
 
 from api.schemas.predict_dto import RacePredictionRequest, RacePredictionResponse, RacePredictionByDateRequest
-from api.services.predict_service import predict_service
+from application.services.predict_service import predict_service
 
 router = APIRouter(
     prefix="/predict",
