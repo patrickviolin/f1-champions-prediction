@@ -23,7 +23,10 @@ class RaceHistorySelector:
         race_date = pd.to_datetime(race_date)
 
         races_history = raw_data.races[raw_data.races['date'] <= race_date]
-        race_to_predict = races_history[races_history['date'] == race_date].iloc[0]
+        try:
+            race_to_predict = races_history[races_history['date'] == race_date].iloc[0]
+        except IndexError:
+            raise IndexError("Race not found for selected date. Please select a valid date.")
 
         race_id_to_predict = race_to_predict['id']
         round_to_predict = int(race_to_predict['round'])
