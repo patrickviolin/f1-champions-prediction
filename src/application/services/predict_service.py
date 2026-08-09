@@ -105,7 +105,9 @@ class PredictService:
             'reached_q1', 'q2_millis', 'reached_q2', 'q3_millis', 'reached_q3',
             'constructorId', 'constructor_momentum', 'round', 'circuitId', 'grid',
             'driver_track_affinity', 'constructor_track_affinity', 'constructor_dnf_rate',
-            'driver_dnf_rate', 'circuit_dnf_rate'
+            'driver_dnf_rate', 'circuit_dnf_rate', 'current_season_points_per_race',
+            'current_season_avg_finish', 'current_season_podium_rate', 'current_season_q3_rate',
+            'current_constructor_points_per_race', 'last_3_current_season_avg_finish'
         ]
 
         df_features = df_features[expected_order]

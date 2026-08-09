@@ -14,6 +14,10 @@ class DriverRaceData(BaseModel):
     driver_ref: str = Field(..., description='Driver Reference Name (ex: \'max_verstappen\'')
     driver_age: float
     driver_momentum: float
+    current_season_points_per_race: float = 0.0
+    current_season_avg_finish: float = 0.0
+    current_season_podium_rate: float = 0.0
+    current_season_q3_rate: float = 0.0
     driver_track_affinity: float
     driver_dnf_rate: float
 
@@ -28,11 +32,13 @@ class DriverRaceData(BaseModel):
 
     constructor_id: Optional[int] = None
     constructor_momentum: float
+    current_constructor_points_per_race: float = 0.0
     constructor_track_affinity: float
     constructor_dnf_rate: float
 
     round: int
     circuit_id: Optional[int] = None
+    last_3_current_season_avg_finish: float = 0.0
     circuit_dnf_rate: float
 
 

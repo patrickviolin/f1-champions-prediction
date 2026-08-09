@@ -21,6 +21,10 @@ class RacePredictionMapper:
                 'driver_ref': str(data['driverId']),
                 'driver_age': float(data['driver_age']),
                 'driver_momentum': float(data['driver_momentum']),
+                'current_season_points_per_race': float(data['current_season_points_per_race']),
+                'current_season_avg_finish': float(data['current_season_avg_finish']),
+                'current_season_podium_rate': float(data['current_season_podium_rate']),
+                'current_season_q3_rate': float(data['current_season_q3_rate']),
                 'driver_track_affinity': float(data['driver_track_affinity']),
                 'driver_dnf_rate': float(data['driver_dnf_rate']),
 
@@ -39,11 +43,13 @@ class RacePredictionMapper:
                 if pd.notna(data['constructor_id_mapped'])
                 else None,
                 'constructor_momentum': float(data['constructor_momentum']),
+                'current_constructor_points_per_race': float(data['current_constructor_points_per_race']),
                 'constructor_track_affinity': float(data['constructor_track_affinity']),
                 'constructor_dnf_rate': float(data['constructor_dnf_rate']),
 
                 'round': round_to_predict,
                 'circuit_id': int(data['circuit_id_mapped']) if pd.notna(data['circuit_id_mapped']) else None,
+                'last_3_current_season_avg_finish': float(data['last_3_current_season_avg_finish']),
                 'circuit_dnf_rate': float(data['circuit_dnf_rate']),
             }
             grid_payload.append(DriverRaceData(**driver_obj))
