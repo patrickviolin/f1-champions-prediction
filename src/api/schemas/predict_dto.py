@@ -55,6 +55,12 @@ class SeasonPredictionRequest(BaseModel):
         default=False,
         description='Use official results for completed races and predict only future races',
     )
+    current_form_weight: float = Field(
+        default=0.35,
+        ge=0.0,
+        le=1.0,
+        description='Weight applied to current-season points pace when use_current_results is enabled',
+    )
 
 
 # ==========================================
@@ -81,24 +87,25 @@ class SeasonDriverStanding(BaseModel):
     driver_ref: str
     driver_name: str
     constructor_ref: str
-    current_points: int
-    predicted_points: int
-    season_points: int
-    constructor_points: int
+    current_points: float
+    predicted_points: float
+    season_points: float
+    constructor_points: float
 
 
 class SeasonConstructorStanding(BaseModel):
     standing_position: int
     constructor_ref: str
     constructor_name: str
-    current_points: int
-    predicted_points: int
-    constructor_points: int
+    current_points: float
+    predicted_points: float
+    constructor_points: float
 
 
 class SeasonPredictionResponse(BaseModel):
     year: int
     status: str
     use_current_results: bool
+    current_form_weight: float
     driver_standings: List[SeasonDriverStanding]
     constructor_standings: List[SeasonConstructorStanding]

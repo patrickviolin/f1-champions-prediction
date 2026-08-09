@@ -116,7 +116,8 @@ def test_season_prediction_during_season_endpoint():
 
     payload = {
         "year": 2026,
-        "use_current_results": True
+        "use_current_results": True,
+        "current_form_weight": 0.35
     }
 
     response = requests.post(url, json=payload, headers={"Content-Type": "application/json"})

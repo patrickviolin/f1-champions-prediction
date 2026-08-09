@@ -26,6 +26,8 @@ F1_POINTS_BY_POSITION = {
     10: 1,
 }
 
+DEFAULT_CURRENT_FORM_WEIGHT = 0.35
+
 POST_QUALIFYING_FEATURE_ORDER = [
     'driver_age',
     'driver_momentum',
@@ -302,6 +304,8 @@ def _combine_driver_standings(
         current_driver_standings: DataFrame,
         future_predictions: DataFrame,
         raw_data: F1DbRawData,
+        completed_races_count: int,
+        current_form_weight: float,
 ) -> DataFrame:
     standings = pd.merge(
         current_driver_standings,
@@ -312,6 +316,13 @@ def _combine_driver_standings(
     )
     standings['current_points'] = standings['current_points'].fillna(0.0)
     standings['future_points'] = standings['future_points'].fillna(0.0)
+    standings['future_points'] = _apply_current_form_adjustment(
+        current_points=standings['current_points'],
+        ml_future_points=standings['future_points'],
+        future_races_count=_future_races_count(future_predictions),
+        completed_races_count=completed_races_count,
+        current_form_weight=current_form_weight,
+    )
     standings['constructor_ref'] = standings['constructor_ref'].fillna(standings['future_constructor_ref'])
     standings['season_points'] = standings['current_points'] + standings['future_points']
     standings = standings.sort_values(by='season_points', ascending=False).reset_index(drop=True)
@@ -340,6 +351,8 @@ def _combine_constructor_standings(
         current_constructor_standings: DataFrame,
         future_predictions: DataFrame,
         raw_data: F1DbRawData,
+        completed_races_count: int,
+        current_form_weight: float,
 ) -> DataFrame:
     standings = pd.merge(
         current_constructor_standings,
@@ -350,6 +363,13 @@ def _combine_constructor_standings(
     )
     standings['current_points'] = standings['current_points'].fillna(0.0)
     standings['future_points'] = standings['future_points'].fillna(0.0)
+    standings['future_points'] = _apply_current_form_adjustment(
+        current_points=standings['current_points'],
+        ml_future_points=standings['future_points'],
+        future_races_count=_future_races_count(future_predictions),
+        completed_races_count=completed_races_count,
+        current_form_weight=current_form_weight,
+    )
     standings['constructor_points'] = standings['current_points'] + standings['future_points']
     standings = standings.sort_values(by='constructor_points', ascending=False).reset_index(drop=True)
     standings['standing_position'] = standings.index + 1
@@ -370,6 +390,27 @@ def _combine_constructor_standings(
         how='left',
         validate='many_to_one',
     ).rename(columns={'future_points': 'predicted_points', 'name': 'constructor_name'}).drop(columns='id')
+
+
+def _future_races_count(future_predictions: DataFrame) -> int:
+    if future_predictions.empty:
+        return 0
+
+    return int(future_predictions['race_id'].nunique())
+
+
+def _apply_current_form_adjustment(
+    current_points: Series,
+    ml_future_points: Series,
+    future_races_count: int,
+    completed_races_count: int,
+    current_form_weight: float,
+) -> Series:
+    if completed_races_count == 0 or future_races_count == 0 or current_form_weight == 0:
+        return ml_future_points
+
+    current_pace_projection = (current_points / completed_races_count) * future_races_count
+    return (ml_future_points * (1 - current_form_weight)) + (current_pace_projection * current_form_weight)
 
 
 def _build_prediction_results(
@@ -447,14 +488,19 @@ class F1DbSeasonPrediction:
         return categories
 
     def predict_season_standings(
-            self,
-            season_year: int,
-            use_current_results: bool = False,
+        self,
+        season_year: int,
+        use_current_results: bool = False,
+        current_form_weight: float = DEFAULT_CURRENT_FORM_WEIGHT,
     ) -> tuple[DataFrame, DataFrame]:
         raw_data = self.loader.load()
 
         if use_current_results:
-            return self._predict_season_standings_from_current_results(season_year, raw_data)
+            return self._predict_season_standings_from_current_results(
+                season_year=season_year,
+                raw_data=raw_data,
+                current_form_weight=current_form_weight,
+            )
 
         race_predictions = self._predict_season_races(
             season_year=season_year,
@@ -485,10 +531,12 @@ class F1DbSeasonPrediction:
         return driver_standings, constructor_standings
 
     def _predict_season_standings_from_current_results(
-            self,
-            season_year: int,
-            raw_data: F1DbRawData,
+        self,
+        season_year: int,
+        raw_data: F1DbRawData,
+        current_form_weight: float,
     ) -> tuple[DataFrame, DataFrame]:
+        completed_races_count = len(_completed_race_ids(season_year, raw_data))
         future_predictions = self._predict_season_races(
             season_year=season_year,
             raw_data=raw_data,
@@ -507,11 +555,15 @@ class F1DbSeasonPrediction:
             _latest_driver_standings(season_year, raw_data),
             future_predictions,
             raw_data,
+            completed_races_count,
+            current_form_weight,
         )
         constructor_standings = _combine_constructor_standings(
             _latest_constructor_standings(season_year, raw_data),
             future_predictions,
             raw_data,
+            completed_races_count,
+            current_form_weight,
         )
         driver_standings = pd.merge(
             driver_standings,

@@ -30,22 +30,24 @@ class PredictService:
         driver_standings, constructor_standings = self.f1db_season_prediction.predict_season_standings(
             season_year=request.year,
             use_current_results=request.use_current_results,
+            current_form_weight=request.current_form_weight,
         )
 
         return SeasonPredictionResponse(
             year=request.year,
             status='success',
             use_current_results=request.use_current_results,
+            current_form_weight=request.current_form_weight,
             driver_standings=[
                 SeasonDriverStanding(
                     standing_position=int(row['standing_position']),
                     driver_ref=str(row['driver_ref']),
                     driver_name=str(row['driver_name']),
                     constructor_ref=str(row['constructor_ref']),
-                    current_points=int(row['current_points']),
-                    predicted_points=int(row['predicted_points']),
-                    season_points=int(row['season_points']),
-                    constructor_points=int(row['constructor_points']),
+                    current_points=round(float(row['current_points']), 2),
+                    predicted_points=round(float(row['predicted_points']), 2),
+                    season_points=round(float(row['season_points']), 2),
+                    constructor_points=round(float(row['constructor_points']), 2),
                 )
                 for _, row in driver_standings.iterrows()
             ],
@@ -54,9 +56,9 @@ class PredictService:
                     standing_position=int(row['standing_position']),
                     constructor_ref=str(row['constructor_ref']),
                     constructor_name=str(row['constructor_name']),
-                    current_points=int(row['current_points']),
-                    predicted_points=int(row['predicted_points']),
-                    constructor_points=int(row['constructor_points']),
+                    current_points=round(float(row['current_points']), 2),
+                    predicted_points=round(float(row['predicted_points']), 2),
+                    constructor_points=round(float(row['constructor_points']), 2),
                 )
                 for _, row in constructor_standings.iterrows()
             ],
