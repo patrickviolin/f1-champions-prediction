@@ -99,5 +99,29 @@ def test_prediction_by_race_date_endpoint():
     setup_api_response(url, payload)
 
 
+def test_season_prediction_endpoint():
+    url = 'http://localhost:8000/api/v1/predict/season'
+
+    payload = {
+        "year": 2026,
+        "use_current_results": False
+    }
+
+    response = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
+    print(json.dumps(response.json(), indent=4, ensure_ascii=False))
+
+
+def test_season_prediction_during_season_endpoint():
+    url = 'http://localhost:8000/api/v1/predict/season'
+
+    payload = {
+        "year": 2026,
+        "use_current_results": True
+    }
+
+    response = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
+    print(json.dumps(response.json(), indent=4, ensure_ascii=False))
+
+
 if __name__ == '__main__':
-    test_prediction_by_race_date_endpoint()
+    test_season_prediction_during_season_endpoint()
