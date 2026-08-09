@@ -9,6 +9,7 @@ from api.schemas.predict_dto import RacePredictionRequest
 from data.f1db_loader import F1DbDataLoader, F1DbRawData
 from data.race_history_selector import RaceContext, RaceHistorySelector
 from data.target_race_data_builder import TargetRaceDataBuilder
+from features.current_season_feature_engineering import build_f1db_current_season_features
 from features.race_feature_engineering import RaceFeatureEngineering
 from mappers.race_prediction_mapper import RacePredictionMapper
 
@@ -50,6 +51,13 @@ class F1DbDataToMlSchema:
         race_results_past = self._build_past_race_results(context)
         feature_lookups = self.feature_engineer.build_features(race_results_past, context.race_to_predict)
         target_race_df = self.target_race_data_builder.build(raw_data, context, feature_lookups)
+        target_race_df['constructor_ref'] = target_race_df['constructorId']
+        target_race_df = build_f1db_current_season_features(
+            race_features=target_race_df,
+            race_results=raw_data.race_results,
+            qualifying=raw_data.qualifying,
+            race=context.race_to_predict,
+        )
 
         race_name = raw_data.races[raw_data.races['id'] == target_race_df['raceId'].iloc[0]]['officialName'].iloc[0]
 

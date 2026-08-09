@@ -4,7 +4,10 @@ import pandas as pd
 from pandas import DataFrame, Series
 from xgboost import XGBRanker
 
-from features.current_season_feature_engineering import build_processed_current_season_features
+from features.current_season_feature_engineering import (
+    CURRENT_SEASON_FEATURE_COLUMNS,
+    build_processed_current_season_features,
+)
 from ml.pre_qualifying_features import (
     PRE_QUALIFYING_EXCLUDED_COLUMNS,
     PRE_QUALIFYING_FEATURE_ORDER,
@@ -102,6 +105,7 @@ class XGBPreQualifyingRankerPredictor:
             year=year,
             driver_id=driver_id,
         )
+        features = features.drop(columns=CURRENT_SEASON_FEATURE_COLUMNS, errors='ignore')
         return pd.concat([features, current_season_features], axis=1)
 
 

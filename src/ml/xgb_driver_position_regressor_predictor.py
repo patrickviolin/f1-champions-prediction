@@ -10,7 +10,7 @@ class XGBDriverPositionRegressorPredictor(object):
         """Init the model and variables"""
         self.model = XGBRegressor(
             random_state=42,
-            device='cuda',
+            device='cpu',
             n_jobs=-1,
             enable_categorical=True,
             max_depth=2,
@@ -89,5 +89,4 @@ if __name__ == '__main__':
     predictor.train()
     # predictor.tune_hyperparameters()
     ml_utils.evaluate_xgboost(predictor)
-    ml_utils.show_feature_importance(predictor)
     ml_utils.save_model(predictor, file_name='xgb_regressor_model.json')

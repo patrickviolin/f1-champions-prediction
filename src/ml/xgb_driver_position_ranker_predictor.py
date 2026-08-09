@@ -19,7 +19,7 @@ class XGBDriverPositionRankerPredictor(object):
             enable_categorical=True,
             n_jobs=-1,
             random_state=42,
-            device='cuda',
+            device='cpu',
             max_depth=4,
             min_child_weight=7,
             learning_rate=0.025,
@@ -116,7 +116,7 @@ class XGBDriverPositionRankerPredictor(object):
                     enable_categorical=True,
                     n_jobs=-1,
                     random_state=42,
-                    device='cuda',
+                    device='cpu',
                     objective=self.objective,
                     eval_metric=self.eval_metric,
                     **params,
@@ -188,5 +188,4 @@ if __name__ == '__main__':
     predictor.train()
     # predictor.tune_hyperparameters()
     ml_utils.evaluate_xgboost(predictor)
-    ml_utils.show_feature_importance(predictor)
     ml_utils.save_model(predictor, file_name='xgb_ranker_model.json')

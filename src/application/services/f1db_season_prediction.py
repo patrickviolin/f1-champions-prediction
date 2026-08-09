@@ -49,6 +49,12 @@ POST_QUALIFYING_FEATURE_ORDER = [
     'constructor_dnf_rate',
     'driver_dnf_rate',
     'circuit_dnf_rate',
+    'current_season_points_per_race',
+    'current_season_avg_finish',
+    'current_season_podium_rate',
+    'current_season_q3_rate',
+    'current_constructor_points_per_race',
+    'last_3_current_season_avg_finish',
 ]
 
 POST_QUALIFYING_CATEGORICAL_COLUMNS = ['constructorId', 'circuitId']
