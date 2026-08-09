@@ -9,6 +9,7 @@ from xgboost import XGBRanker
 from application.services.f1db_data_to_ml_schema import F1DbDataToMlSchema
 from data.f1db_loader import F1DbDataLoader, F1DbRawData
 from data.race_history_selector import RaceContext, RaceHistorySelector
+from features.current_season_feature_engineering import build_f1db_current_season_features
 from features.race_feature_engineering import RaceFeatureEngineering, RaceFeatureLookups
 from ml.pre_qualifying_features import PRE_QUALIFYING_CATEGORICAL_COLUMNS, PRE_QUALIFYING_FEATURE_ORDER
 from utils import f1db_utils
@@ -26,7 +27,7 @@ F1_POINTS_BY_POSITION = {
     10: 1,
 }
 
-DEFAULT_CURRENT_FORM_WEIGHT = 0.35
+DEFAULT_CURRENT_FORM_WEIGHT = 0.0
 
 POST_QUALIFYING_FEATURE_ORDER = [
     'driver_age',
@@ -614,7 +615,13 @@ class F1DbSeasonPrediction:
         race_results_past = _build_past_race_results(context)
         feature_lookups = self.feature_engineer.build_features(race_results_past, context.race_to_predict)
 
-        return _build_season_entry_features(raw_data, context, feature_lookups)
+        race_features = _build_season_entry_features(raw_data, context, feature_lookups)
+        return build_f1db_current_season_features(
+            race_features=race_features,
+            race_results=raw_data.race_results,
+            qualifying=raw_data.qualifying,
+            race=context.race_to_predict,
+        )
 
     def _predict_post_qualifying_race(self, race: Series, raw_data: F1DbRawData) -> DataFrame:
         request = self.f1db_data_to_ml_schema.build_request(pd.to_datetime(race['date']).date())

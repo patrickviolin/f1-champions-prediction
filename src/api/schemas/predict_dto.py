@@ -56,7 +56,7 @@ class SeasonPredictionRequest(BaseModel):
         description='Use official results for completed races and predict only future races',
     )
     current_form_weight: float = Field(
-        default=0.35,
+        default=0.0,
         ge=0.0,
         le=1.0,
         description='Weight applied to current-season points pace when use_current_results is enabled',

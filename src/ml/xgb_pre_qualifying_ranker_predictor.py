@@ -4,6 +4,7 @@ import pandas as pd
 from pandas import DataFrame, Series
 from xgboost import XGBRanker
 
+from features.current_season_feature_engineering import build_processed_current_season_features
 from ml.pre_qualifying_features import (
     PRE_QUALIFYING_EXCLUDED_COLUMNS,
     PRE_QUALIFYING_FEATURE_ORDER,
@@ -24,7 +25,7 @@ class XGBPreQualifyingRankerPredictor:
             enable_categorical=True,
             n_jobs=-1,
             random_state=42,
-            device='cuda',
+            device='cpu',
             max_depth=4,
             min_child_weight=7,
             learning_rate=0.025,
@@ -46,11 +47,29 @@ class XGBPreQualifyingRankerPredictor:
     def load_and_prepare_data(self) -> None:
         ml_utils.load_x_and_y_data(self)
 
-        self.x_train = _to_pre_qualifying_features(self.x_train)
-        self.x_test = _to_pre_qualifying_features(self.x_test)
-
         self.qid_train = pd.read_csv(f'{self.data_dir}/qid_train.csv').squeeze('columns')
         self.qid_test = pd.read_csv(f'{self.data_dir}/qid_test.csv').squeeze('columns')
+        driver_train = pd.read_csv(f'{self.data_dir}/driver_train.csv').squeeze('columns')
+        driver_test = pd.read_csv(f'{self.data_dir}/driver_test.csv').squeeze('columns')
+        year_test = pd.read_csv(f'{self.data_dir}/year_test.csv').squeeze('columns')
+
+        self.x_train = self._with_current_season_features(
+            features=self.x_train,
+            y_position=self.y_train,
+            qid=self.qid_train,
+            year=self.year_train,
+            driver_id=driver_train,
+        )
+        self.x_test = self._with_current_season_features(
+            features=self.x_test,
+            y_position=self.y_test,
+            qid=self.qid_test,
+            year=year_test,
+            driver_id=driver_test,
+        )
+
+        self.x_train = _to_pre_qualifying_features(self.x_train)
+        self.x_test = _to_pre_qualifying_features(self.x_test)
 
         self.y_train = 25 - self.y_train
         self.y_test = 25 - self.y_test
@@ -67,6 +86,23 @@ class XGBPreQualifyingRankerPredictor:
             eval_set=[(self.x_test, self.y_test)],
             verbose=False,
         )
+
+    def _with_current_season_features(
+        self,
+        features: DataFrame,
+        y_position: Series,
+        qid: Series,
+        year: Series,
+        driver_id: Series,
+    ) -> DataFrame:
+        current_season_features = build_processed_current_season_features(
+            features=features,
+            y_position=y_position,
+            qid=qid,
+            year=year,
+            driver_id=driver_id,
+        )
+        return pd.concat([features, current_season_features], axis=1)
 
 
 if __name__ == '__main__':
