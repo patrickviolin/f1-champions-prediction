@@ -7,11 +7,15 @@ from pandas import DataFrame
 
 @dataclass(frozen=True)
 class F1DbRawData:
+    constructors: DataFrame
     drivers: DataFrame
     qualifying: DataFrame
+    race_constructor_standings: DataFrame
+    race_driver_standings: DataFrame
     race_results: DataFrame
     races: DataFrame
     starting_grid: DataFrame
+    season_entrants_drivers: DataFrame
 
 
 class F1DbDataLoader:
@@ -27,11 +31,15 @@ class F1DbDataLoader:
         drivers['dateOfBirth'] = pd.to_datetime(drivers['dateOfBirth'])
 
         return F1DbRawData(
+            constructors=self._read_csv('f1db-constructors.csv'),
             drivers=drivers,
             qualifying=self._read_csv('f1db-races-qualifying-results.csv'),
+            race_constructor_standings=self._read_csv('f1db-races-constructor-standings.csv'),
+            race_driver_standings=self._read_csv('f1db-races-driver-standings.csv'),
             race_results=self._read_csv('f1db-races-race-results.csv'),
             races=races,
             starting_grid=self._read_csv('f1db-races-starting-grid-positions.csv'),
+            season_entrants_drivers=self._read_csv('f1db-seasons-entrants-drivers.csv'),
         )
 
     def _read_csv(self, file_name: str) -> DataFrame:
