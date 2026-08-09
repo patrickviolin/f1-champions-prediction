@@ -72,6 +72,10 @@ class PredictService:
         :param model_type: regressor or ranker
         :return:RacePredictionResponse
         """
+        if not self.f1db_data_to_ml_schema.has_qualifying_data(request.race_date):
+            race_predictions = self.f1db_season_prediction.predict_race_pre_qualifying(request.race_date)
+            return self._build_prediction_response(race_predictions)
+
         race_full_data = self.f1db_data_to_ml_schema.build_request(request.race_date)
 
         return self.execute_prediction(race_full_data, model_type)
@@ -137,6 +141,20 @@ class PredictService:
             race=request.race_name,
             status='success',
             predictions=predictions_list
+        )
+
+    def _build_prediction_response(self, race_predictions: pd.DataFrame) -> RacePredictionResponse:
+        return RacePredictionResponse(
+            race=str(race_predictions['race_name'].iloc[0]),
+            status='success',
+            predictions=[
+                DriverPrediction(
+                    driver_ref=str(row['driver_ref']),
+                    predicted_score=float(row['predicted_score']),
+                    predicted_position=int(row['predicted_position']),
+                )
+                for _, row in race_predictions.iterrows()
+            ],
         )
 
 

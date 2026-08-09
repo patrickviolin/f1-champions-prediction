@@ -1,12 +1,16 @@
 from datetime import date
+import importlib
 from pathlib import Path
 import runpy
+import sys
 from types import SimpleNamespace
 from unittest import TestCase
 from unittest.mock import MagicMock, mock_open, patch
 
 import pandas as pd
 
+from api.schemas.predict_dto import DriverRaceData, RacePredictionByDateRequest, RacePredictionRequest, \
+    SeasonPredictionRequest
 from application.services.f1db_data_to_ml_schema import F1DbDataToMlSchema
 from data.f1db_loader import F1DbDataLoader, F1DbRawData
 from data.race_history_selector import RaceContext, RaceHistorySelector
@@ -121,6 +125,35 @@ def _lookups() -> RaceFeatureLookups:
 
 
 class F1DbSupportingServicesTest(TestCase):
+    def _load_predict_service_module(self):
+        sys.modules.pop('application.services.predict_service', None)
+
+        schema = SimpleNamespace(
+            has_qualifying_data=MagicMock(return_value=True),
+            build_request=MagicMock(),
+        )
+        season_prediction = SimpleNamespace(
+            predict_race_pre_qualifying=MagicMock(),
+            predict_season_standings=MagicMock(),
+        )
+
+        patches = [
+            patch('xgboost.XGBRegressor.load_model'),
+            patch('xgboost.XGBRanker.load_model'),
+            patch('application.services.f1db_data_to_ml_schema.F1DbDataToMlSchema.create_default',
+                  return_value=schema),
+            patch('application.services.f1db_season_prediction.F1DbSeasonPrediction.create_default',
+                  return_value=season_prediction),
+        ]
+
+        started_patches = [patcher.start() for patcher in patches]
+        self.addCleanup(lambda: sys.modules.pop('application.services.predict_service', None))
+        for patcher in patches:
+            self.addCleanup(patcher.stop)
+
+        module = importlib.import_module('application.services.predict_service')
+        return module, schema, season_prediction, started_patches
+
     def test_loader_reads_all_raw_data_and_converts_dates(self):
         def read_csv(path, low_memory):
             file_name = Path(path).name
@@ -158,6 +191,10 @@ class F1DbSupportingServicesTest(TestCase):
         self.assertEqual(list(context.race_results['raceId']), [1, 1])
         self.assertEqual(list(context.qualifying['raceId']), [2])
 
+    def test_race_history_selector_raises_friendly_error_for_unknown_date(self):
+        with self.assertRaisesRegex(IndexError, 'Race not found for selected date'):
+            RaceHistorySelector().select(_raw_data(), date(2026, 3, 15))
+
     def test_target_race_data_builder_prepares_and_builds_target_features(self):
         raw_data = _raw_data()
         builder = TargetRaceDataBuilder()
@@ -187,7 +224,7 @@ class F1DbSupportingServicesTest(TestCase):
         self.assertEqual(target['circuit_id_mapped'].iloc[0], 10)
         self.assertEqual(target['circuit_dnf_rate'].iloc[0], 0.5)
 
-    def test_target_race_data_builder_raises_when_qualifying_is_missing(self):
+    def test_target_race_data_builder_returns_empty_frame_when_qualifying_is_missing(self):
         raw_data = _raw_data()
         context = RaceContext(
             qualifying=pd.DataFrame(columns=raw_data.qualifying.columns),
@@ -198,8 +235,9 @@ class F1DbSupportingServicesTest(TestCase):
             round_to_predict=2,
         )
 
-        with self.assertRaises(ValueError):
-            TargetRaceDataBuilder().build(raw_data, context, _lookups())
+        result = TargetRaceDataBuilder().build(raw_data, context, _lookups())
+
+        self.assertTrue(result.empty)
 
     def test_race_feature_engineering_builds_all_lookup_tables(self):
         raw_data = _raw_data()
@@ -348,6 +386,7 @@ class F1DbSupportingServicesTest(TestCase):
         }):
             request = service.build_request(date(2026, 3, 8))
 
+        self.assertTrue(service.has_qualifying_data(date(2026, 3, 8)))
         self.assertEqual(request.race_name, 'Round 2')
         self.assertEqual(request.grid_data[0].driver_ref, 'lando-norris')
         self.assertEqual(request.grid_data[0].constructor_id, 1)
@@ -460,3 +499,129 @@ class F1DbSupportingServicesTest(TestCase):
         self.assertEqual(post.call_count, 1)
         self.assertEqual(post.call_args.args[0], 'http://localhost:8000/api/v1/predict/season')
         self.assertEqual(post.call_args.kwargs['json'], {'year': 2026, 'use_current_results': True})
+
+    def test_predict_service_uses_prequalifying_model_when_race_date_has_no_qualifying(self):
+        module, schema, season_prediction, _ = self._load_predict_service_module()
+        schema.has_qualifying_data.return_value = False
+        season_prediction.predict_race_pre_qualifying.return_value = pd.DataFrame(
+            [
+                {
+                    'race_name': 'Future Grand Prix',
+                    'driver_ref': 'lando-norris',
+                    'predicted_score': 2.0,
+                    'predicted_position': 1,
+                },
+                {
+                    'race_name': 'Future Grand Prix',
+                    'driver_ref': 'oscar-piastri',
+                    'predicted_score': 1.0,
+                    'predicted_position': 2,
+                },
+            ]
+        )
+
+        response = module.predict_service.execute_prediction_by_race_date(
+            RacePredictionByDateRequest(race_date=date(2026, 3, 8)),
+            model_type='ranker',
+        )
+
+        schema.build_request.assert_not_called()
+        season_prediction.predict_race_pre_qualifying.assert_called_once_with(date(2026, 3, 8))
+        self.assertEqual(response.race, 'Future Grand Prix')
+        self.assertEqual(response.predictions[0].driver_ref, 'lando-norris')
+
+    def test_predict_service_uses_post_qualifying_request_when_qualifying_exists(self):
+        module, schema, _, _ = self._load_predict_service_module()
+        request = self._race_prediction_request()
+        schema.has_qualifying_data.return_value = True
+        schema.build_request.return_value = request
+        module.predict_service.ranker_model = SimpleNamespace(predict=MagicMock(return_value=[0.1, 0.9]))
+
+        response = module.predict_service.execute_prediction_by_race_date(
+            RacePredictionByDateRequest(race_date=date(2026, 3, 8)),
+            model_type='ranker',
+        )
+
+        schema.build_request.assert_called_once_with(date(2026, 3, 8))
+        self.assertEqual(response.predictions[0].driver_ref, 'oscar-piastri')
+        self.assertEqual(response.predictions[0].predicted_position, 1)
+
+    def test_predict_service_execute_prediction_supports_regressor_and_season_responses(self):
+        module, _, season_prediction, _ = self._load_predict_service_module()
+        module.predict_service.regressor_model = SimpleNamespace(predict=MagicMock(return_value=[0.8, 0.2]))
+        season_prediction.predict_season_standings.return_value = (
+            pd.DataFrame(
+                [
+                    {
+                        'standing_position': 1,
+                        'driver_ref': 'lando-norris',
+                        'driver_name': 'Lando Norris',
+                        'constructor_ref': 'mclaren',
+                        'current_points': 25.123,
+                        'predicted_points': 50.456,
+                        'season_points': 75.789,
+                        'constructor_points': 120.111,
+                    }
+                ]
+            ),
+            pd.DataFrame(
+                [
+                    {
+                        'standing_position': 1,
+                        'constructor_ref': 'mclaren',
+                        'constructor_name': 'McLaren',
+                        'current_points': 40.123,
+                        'predicted_points': 80.456,
+                        'constructor_points': 120.789,
+                    }
+                ]
+            ),
+        )
+
+        race_response = module.predict_service.execute_prediction(self._race_prediction_request(), 'regressor')
+        season_response = module.predict_service.execute_season_prediction(
+            SeasonPredictionRequest(year=2026, use_current_results=True, current_form_weight=0.25)
+        )
+
+        self.assertEqual(race_response.predictions[0].driver_ref, 'lando-norris')
+        self.assertEqual(season_response.driver_standings[0].season_points, 75.79)
+        self.assertEqual(season_response.constructor_standings[0].constructor_points, 120.79)
+
+    def _race_prediction_request(self):
+        return RacePredictionRequest(
+            race_name='Race',
+            grid_data=[
+                self._driver_race_data('lando-norris'),
+                self._driver_race_data('oscar-piastri'),
+            ],
+        )
+
+    def _driver_race_data(self, driver_ref: str):
+        return DriverRaceData(
+            driver_ref=driver_ref,
+            driver_age=26.0,
+            driver_momentum=2.0,
+            current_season_points_per_race=18.0,
+            current_season_avg_finish=2.0,
+            current_season_podium_rate=1.0,
+            current_season_q3_rate=0.5,
+            driver_track_affinity=2.0,
+            driver_dnf_rate=0.0,
+            position_qualifying=1,
+            grid=1,
+            q1_millis=90000.0,
+            reached_q1=True,
+            q2_millis=89000.0,
+            reached_q2=True,
+            q3_millis=88000.0,
+            reached_q3=True,
+            constructor_id=1,
+            constructor_momentum=1.5,
+            current_constructor_points_per_race=43.0,
+            constructor_track_affinity=1.5,
+            constructor_dnf_rate=0.0,
+            round=2,
+            circuit_id=10,
+            last_3_current_season_avg_finish=2.0,
+            circuit_dnf_rate=0.5,
+        )

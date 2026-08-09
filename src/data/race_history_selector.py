@@ -23,6 +23,7 @@ class RaceHistorySelector:
         race_date = pd.to_datetime(race_date)
 
         races_history = raw_data.races[raw_data.races['date'] <= race_date]
+
         try:
             race_to_predict = races_history[races_history['date'] == race_date].iloc[0]
         except IndexError:

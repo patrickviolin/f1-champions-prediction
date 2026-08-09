@@ -54,7 +54,7 @@ async def predict_season(request: SeasonPredictionRequest):
              )
 async def predict_race(
         request: RacePredictionByDateRequest,
-        model_type: Annotated[str, Query(description="Choose a model: 'ranker'  or 'regressor'")] = 'ranker'
+        model_type: Annotated[str, Query(description="Choose a model: 'ranker' or 'regressor'")] = 'ranker'
 ):
     """
     Receive grid start data, driver and circuit stats

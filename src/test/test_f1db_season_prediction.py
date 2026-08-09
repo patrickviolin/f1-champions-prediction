@@ -595,6 +595,32 @@ class F1DbSeasonPredictionTest(TestCase):
         predict.assert_called_once_with(2026, self.raw_data)
         self.assertEqual(list(result['race_id']), [2])
 
+    def test_predict_race_pre_qualifying_builds_features_and_predicts_single_race(self):
+        race_predictions = pd.DataFrame(
+            [
+                {
+                    'race_id': 2,
+                    'race_name': '2026 Test Grand Prix',
+                    'round': 1,
+                    'driver_ref': 'lando-norris',
+                    'constructor_ref': 'mclaren',
+                    'predicted_score': 1.0,
+                    'predicted_position': 1,
+                }
+            ]
+        )
+
+        with (
+            patch.object(self.service, '_build_pre_qualifying_race_features', return_value=pd.DataFrame({'x': [1]}))
+            as build_features,
+            patch.object(self.service, '_predict_pre_qualifying_race', return_value=race_predictions) as predict,
+        ):
+            result = self.service.predict_race_pre_qualifying(date(2026, 3, 8))
+
+        build_features.assert_called_once()
+        predict.assert_called_once()
+        self.assertEqual(list(result['race_id']), [2])
+
     def test_predict_season_races_handles_empty_preseason_and_best_available_paths(self):
         empty_raw_data = self.raw_data.__class__(
             constructors=self.raw_data.constructors,
