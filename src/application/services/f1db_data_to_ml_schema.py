@@ -20,7 +20,7 @@ class F1DbDataToMlSchema:
             history_selector: RaceHistorySelector,
             feature_engineer: RaceFeatureEngineering,
             target_race_data_builder: TargetRaceDataBuilder,
-            mapper: RacePredictionMapper,
+            mapper: RacePredictionMapper
     ):
         self.loader = loader
         self.history_selector = history_selector
@@ -29,7 +29,7 @@ class F1DbDataToMlSchema:
         self.mapper = mapper
 
     @classmethod
-    def create_default(cls) -> 'F1DbDataToMlSchema':
+    def create_default(cls) -> F1DbDataToMlSchema:
         project_root = Path(__file__).parent.parent.parent.parent
 
         return cls(
@@ -37,7 +37,7 @@ class F1DbDataToMlSchema:
             history_selector=RaceHistorySelector(),
             feature_engineer=RaceFeatureEngineering(),
             target_race_data_builder=TargetRaceDataBuilder(),
-            mapper=RacePredictionMapper(),
+            mapper=RacePredictionMapper()
         )
 
     def build_request(self, race_date: date) -> RacePredictionRequest:
