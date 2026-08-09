@@ -599,24 +599,101 @@ class F1DbSeasonPrediction:
             season_races = season_races[~season_races['id'].isin(completed_race_ids)]
 
         predictions = []
+        simulated_race_results = self._initial_simulated_race_results(
+            season_year=season_year,
+            raw_data=raw_data,
+            use_best_available_model=use_best_available_model,
+        )
+        simulated_qualifying = self._initial_simulated_qualifying(
+            season_year=season_year,
+            raw_data=raw_data,
+            use_best_available_model=use_best_available_model,
+        )
 
         for _, race in season_races.iterrows():
             if use_best_available_model and _has_qualifying_data(race, raw_data):
                 race_predictions = self._predict_post_qualifying_race(race, raw_data)
             else:
                 race_date = pd.to_datetime(race['date']).date()
-                race_features = self._build_pre_qualifying_race_features(raw_data, race_date)
+                race_features = self._build_pre_qualifying_race_features(
+                    raw_data=raw_data,
+                    race_date=race_date,
+                    race_results=simulated_race_results,
+                    qualifying=simulated_qualifying,
+                )
                 race_predictions = self._predict_pre_qualifying_race(race, race_features)
 
             predictions.append(race_predictions)
+
+            if use_best_available_model:
+                simulated_race_results = pd.concat(
+                    [
+                        simulated_race_results,
+                        self._prediction_results_to_race_results(race, race_predictions),
+                    ],
+                    ignore_index=True,
+                )
 
         if not predictions:
             return DataFrame()
 
         return pd.concat(predictions, ignore_index=True)
 
-    def _build_pre_qualifying_race_features(self, raw_data: F1DbRawData, race_date: date) -> DataFrame:
+    def _initial_simulated_race_results(
+        self,
+        season_year: int,
+        raw_data: F1DbRawData,
+        use_best_available_model: bool,
+    ) -> DataFrame:
+        if use_best_available_model:
+            return raw_data.race_results.copy()
+
+        return raw_data.race_results[raw_data.race_results['year'] != season_year].copy()
+
+    def _initial_simulated_qualifying(
+        self,
+        season_year: int,
+        raw_data: F1DbRawData,
+        use_best_available_model: bool,
+    ) -> DataFrame:
+        if use_best_available_model:
+            return raw_data.qualifying.copy()
+
+        return raw_data.qualifying[raw_data.qualifying['year'] != season_year].copy()
+
+    def _prediction_results_to_race_results(self, race: Series, race_predictions: DataFrame) -> DataFrame:
+        race_results = race_predictions.copy()
+        race_results['raceId'] = race['id']
+        race_results['year'] = int(race['year'])
+        race_results['round'] = int(race['round'])
+        race_results['driverId'] = race_results['driver_ref']
+        race_results['constructorId'] = race_results['constructor_ref']
+        race_results['positionDisplayOrder'] = race_results['predicted_position']
+        race_results['positionNumber'] = race_results['predicted_position']
+        race_results['points'] = race_results['predicted_position'].map(F1_POINTS_BY_POSITION).fillna(0.0)
+
+        return race_results[
+            [
+                'raceId',
+                'year',
+                'round',
+                'driverId',
+                'constructorId',
+                'positionDisplayOrder',
+                'positionNumber',
+                'points',
+            ]
+        ]
+
+    def _build_pre_qualifying_race_features(
+        self,
+        raw_data: F1DbRawData,
+        race_date: date,
+        race_results: DataFrame,
+        qualifying: DataFrame,
+    ) -> DataFrame:
         raw_data = _with_driver_age(raw_data, race_date)
+        raw_data = replace(raw_data, race_results=race_results, qualifying=qualifying)
         context = self.history_selector.select(raw_data, race_date)
         race_results_past = _build_past_race_results(context)
         feature_lookups = self.feature_engineer.build_features(race_results_past, context.race_to_predict)
@@ -624,8 +701,8 @@ class F1DbSeasonPrediction:
         race_features = _build_season_entry_features(raw_data, context, feature_lookups)
         return build_f1db_current_season_features(
             race_features=race_features,
-            race_results=raw_data.race_results,
-            qualifying=raw_data.qualifying,
+            race_results=race_results,
+            qualifying=qualifying,
             race=context.race_to_predict,
         )
 
