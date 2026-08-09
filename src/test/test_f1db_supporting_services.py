@@ -198,7 +198,8 @@ class F1DbSupportingServicesTest(TestCase):
             round_to_predict=2,
         )
 
-        TargetRaceDataBuilder().build(raw_data, context, _lookups())
+        with self.assertRaises(ValueError):
+            TargetRaceDataBuilder().build(raw_data, context, _lookups())
 
     def test_race_feature_engineering_builds_all_lookup_tables(self):
         raw_data = _raw_data()
