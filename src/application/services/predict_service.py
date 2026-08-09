@@ -4,8 +4,10 @@ import pandas as pd
 from xgboost import XGBRanker, XGBRegressor
 
 from api.schemas.predict_dto import RacePredictionRequest, RacePredictionResponse, DriverPrediction, \
-    RacePredictionByDateRequest
+    RacePredictionByDateRequest, SeasonPredictionRequest, SeasonPredictionResponse, SeasonDriverStanding, \
+    SeasonConstructorStanding
 from application.services.f1db_data_to_ml_schema import F1DbDataToMlSchema
+from application.services.f1db_season_prediction import F1DbSeasonPrediction
 
 
 class PredictService:
@@ -22,6 +24,43 @@ class PredictService:
         self.ranker_model.load_model(ranker_path)
 
         self.f1db_data_to_ml_schema = F1DbDataToMlSchema.create_default()
+        self.f1db_season_prediction = F1DbSeasonPrediction.create_default()
+
+    def execute_season_prediction(self, request: SeasonPredictionRequest) -> SeasonPredictionResponse:
+        driver_standings, constructor_standings = self.f1db_season_prediction.predict_season_standings(
+            season_year=request.year,
+            use_current_results=request.use_current_results,
+        )
+
+        return SeasonPredictionResponse(
+            year=request.year,
+            status='success',
+            use_current_results=request.use_current_results,
+            driver_standings=[
+                SeasonDriverStanding(
+                    standing_position=int(row['standing_position']),
+                    driver_ref=str(row['driver_ref']),
+                    driver_name=str(row['driver_name']),
+                    constructor_ref=str(row['constructor_ref']),
+                    current_points=int(row['current_points']),
+                    predicted_points=int(row['predicted_points']),
+                    season_points=int(row['season_points']),
+                    constructor_points=int(row['constructor_points']),
+                )
+                for _, row in driver_standings.iterrows()
+            ],
+            constructor_standings=[
+                SeasonConstructorStanding(
+                    standing_position=int(row['standing_position']),
+                    constructor_ref=str(row['constructor_ref']),
+                    constructor_name=str(row['constructor_name']),
+                    current_points=int(row['current_points']),
+                    predicted_points=int(row['predicted_points']),
+                    constructor_points=int(row['constructor_points']),
+                )
+                for _, row in constructor_standings.iterrows()
+            ],
+        )
 
     def execute_prediction_by_race_date(self, request: RacePredictionByDateRequest, model_type: str) -> RacePredictionResponse:
         """

@@ -2,7 +2,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query
 
-from api.schemas.predict_dto import RacePredictionRequest, RacePredictionResponse, RacePredictionByDateRequest
+from api.schemas.predict_dto import RacePredictionRequest, RacePredictionResponse, RacePredictionByDateRequest, \
+    SeasonPredictionRequest, SeasonPredictionResponse
 from application.services.predict_service import predict_service
 
 router = APIRouter(
@@ -26,6 +27,21 @@ async def predict_race(
     """
     try:
         return predict_service.execute_prediction(request, model_type)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Internal error when processing request. Error: {e}')
+
+
+@router.post('/season', response_model=SeasonPredictionResponse,
+             responses={500: {"description": "Internal server error when predicting season"}})
+async def predict_season(request: SeasonPredictionRequest):
+    """
+    Receive a season year and return predicted driver and constructor standings.
+    :param request: SeasonPredictionRequest
+    :return: SeasonPredictionResponse
+    """
+    try:
+        return predict_service.execute_season_prediction(request)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Internal error when processing request. Error: {e}')

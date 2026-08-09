@@ -48,6 +48,15 @@ class RacePredictionByDateRequest(BaseModel):
     race_date: date
 
 
+class SeasonPredictionRequest(BaseModel):
+    """Request used to predict a full season."""
+    year: int
+    use_current_results: bool = Field(
+        default=False,
+        description='Use official results for completed races and predict only future races',
+    )
+
+
 # ==========================================
 # Output DTOs (Response)
 # ==========================================
@@ -65,3 +74,31 @@ class RacePredictionResponse(BaseModel):
     race: str
     status: str
     predictions: List[DriverPrediction]
+
+
+class SeasonDriverStanding(BaseModel):
+    standing_position: int
+    driver_ref: str
+    driver_name: str
+    constructor_ref: str
+    current_points: int
+    predicted_points: int
+    season_points: int
+    constructor_points: int
+
+
+class SeasonConstructorStanding(BaseModel):
+    standing_position: int
+    constructor_ref: str
+    constructor_name: str
+    current_points: int
+    predicted_points: int
+    constructor_points: int
+
+
+class SeasonPredictionResponse(BaseModel):
+    year: int
+    status: str
+    use_current_results: bool
+    driver_standings: List[SeasonDriverStanding]
+    constructor_standings: List[SeasonConstructorStanding]
