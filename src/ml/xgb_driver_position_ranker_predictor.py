@@ -4,7 +4,7 @@ from sklearn.metrics import ndcg_score
 from sklearn.model_selection import ParameterSampler
 from xgboost import XGBRanker
 
-import utils.utils as utils
+from utils import ml_utils
 
 
 class XGBDriverPositionRankerPredictor(object):
@@ -19,7 +19,7 @@ class XGBDriverPositionRankerPredictor(object):
             enable_categorical=True,
             n_jobs=-1,
             random_state=42,
-            device='cuda',
+            device='cpu',
             max_depth=4,
             min_child_weight=7,
             learning_rate=0.025,
@@ -35,7 +35,7 @@ class XGBDriverPositionRankerPredictor(object):
 
     def load_and_prepare_data(self):
         """Load train/test files already prepared by the notebooks."""
-        utils.load_x_and_y_data(self)
+        ml_utils.load_x_and_y_data(self)
 
         self.qid_train = pd.read_csv(f'{self.data_dir}/qid_train.csv').squeeze('columns')
         self.qid_test = pd.read_csv(f'{self.data_dir}/qid_test.csv').squeeze('columns')
@@ -87,7 +87,7 @@ class XGBDriverPositionRankerPredictor(object):
             'reg_lambda': [0.5, 1.0, 1.5, 2.0, 5.0],
         }
 
-        cv = utils.get_chronological_cv(self)
+        cv = ml_utils.get_chronological_cv(self)
         sampled_params = list(ParameterSampler(
             param_distributions=param_grid,
             n_iter=n_iter,
@@ -116,7 +116,7 @@ class XGBDriverPositionRankerPredictor(object):
                     enable_categorical=True,
                     n_jobs=-1,
                     random_state=42,
-                    device='cuda',
+                    device='cpu',
                     objective=self.objective,
                     eval_metric=self.eval_metric,
                     **params,
@@ -187,6 +187,5 @@ if __name__ == '__main__':
     predictor.load_and_prepare_data()
     predictor.train()
     # predictor.tune_hyperparameters()
-    utils.evaluate_xgboost(predictor)
-    utils.show_feature_importance(predictor)
-    utils.save_model(predictor, file_name='xgb_ranker_model.json')
+    ml_utils.evaluate_xgboost(predictor)
+    ml_utils.save_model(predictor, file_name='xgb_ranker_model.json')

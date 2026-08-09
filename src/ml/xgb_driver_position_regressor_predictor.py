@@ -2,7 +2,7 @@ import pandas as pd
 from sklearn.model_selection import RandomizedSearchCV
 from xgboost import XGBRegressor
 
-import utils.utils as utils
+from utils import ml_utils
 
 
 class XGBDriverPositionRegressorPredictor(object):
@@ -10,7 +10,7 @@ class XGBDriverPositionRegressorPredictor(object):
         """Init the model and variables"""
         self.model = XGBRegressor(
             random_state=42,
-            device='cuda',
+            device='cpu',
             n_jobs=-1,
             enable_categorical=True,
             max_depth=2,
@@ -28,7 +28,7 @@ class XGBDriverPositionRegressorPredictor(object):
 
     def load_and_prepare_data(self):
         """Load train/test data used for training and testing"""
-        utils.load_x_and_y_data(self)
+        ml_utils.load_x_and_y_data(self)
 
         # Keeping QID test to sort the ranking on evaluate
         self.qid_test = pd.read_csv(self.data_dir + '/qid_test.csv').squeeze('columns')
@@ -68,7 +68,7 @@ class XGBDriverPositionRegressorPredictor(object):
             n_jobs=-1,
             verbose=2,
             scoring='neg_root_mean_squared_error',
-            cv=utils.get_chronological_cv(self, 4)
+            cv=ml_utils.get_chronological_cv(self, 4)
         )
 
         search_cv.fit(self.x_train, self.y_train)
@@ -88,6 +88,5 @@ if __name__ == '__main__':
     predictor.load_and_prepare_data()
     predictor.train()
     # predictor.tune_hyperparameters()
-    utils.evaluate_xgboost(predictor)
-    utils.show_feature_importance(predictor)
-    utils.save_model(predictor, file_name='xgb_regressor_model.json')
+    ml_utils.evaluate_xgboost(predictor)
+    ml_utils.save_model(predictor, file_name='xgb_regressor_model.json')
