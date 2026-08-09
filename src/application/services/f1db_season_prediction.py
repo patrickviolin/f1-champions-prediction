@@ -594,6 +594,17 @@ class F1DbSeasonPrediction:
         raw_data = self.loader.load()
         return self._predict_season_races(season_year, raw_data)
 
+    def predict_race_pre_qualifying(self, race_date: date) -> DataFrame:
+        raw_data = self.loader.load()
+        race = raw_data.races[raw_data.races['date'] == pd.to_datetime(race_date)].iloc[0]
+        race_features = self._build_pre_qualifying_race_features(
+            raw_data=raw_data,
+            race_date=race_date,
+            race_results=raw_data.race_results,
+            qualifying=raw_data.qualifying,
+        )
+        return self._predict_pre_qualifying_race(race, race_features)
+
     def _predict_season_races(
             self,
             season_year: int,

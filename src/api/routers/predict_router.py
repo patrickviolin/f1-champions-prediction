@@ -48,10 +48,13 @@ async def predict_season(request: SeasonPredictionRequest):
 
 
 @router.post('/race-by-date', response_model=RacePredictionResponse,
-             responses={500: {"description": "Internal server error when predicting"}})
+             responses={
+                 500: {"description": "Internal server error when predicting"},
+                 400: {"description": "Invalid race date"}}
+             )
 async def predict_race(
         request: RacePredictionByDateRequest,
-        model_type: Annotated[str, Query(description="Choose a model: 'ranker'  or 'regressor'")] = 'ranker'
+        model_type: Annotated[str, Query(description="Choose a model: 'ranker' or 'regressor'")] = 'ranker'
 ):
     """
     Receive grid start data, driver and circuit stats
@@ -63,5 +66,7 @@ async def predict_race(
     try:
         return predict_service.execute_prediction_by_race_date(request, model_type)
 
+    except IndexError as e:
+        raise HTTPException(status_code=400, detail=f'{e}')
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Internal error when processing request. Error: {e}')

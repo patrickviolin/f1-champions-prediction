@@ -32,8 +32,7 @@ class TargetRaceDataBuilder:
         target_race_df = context.qualifying[context.qualifying['raceId'] == context.race_id_to_predict].copy()
 
         if target_race_df.empty:
-            raise ValueError("There's no qualifying data for the chosen race. Is F1DB already updated with Saturday's qualifying data?"
-            )
+            return target_race_df
 
         target_race_df = self._merge_starting_grid(target_race_df, raw_data)
         target_race_df = self._merge_driver_age(target_race_df, raw_data)

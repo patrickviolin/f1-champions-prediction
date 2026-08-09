@@ -63,6 +63,11 @@ class F1DbDataToMlSchema:
 
         return self.mapper.to_request(target_race_df, race_name, context.round_to_predict)
 
+    def has_qualifying_data(self, race_date: date) -> bool:
+        raw_data = self.loader.load()
+        context = self.history_selector.select(raw_data, race_date)
+        return not context.qualifying[context.qualifying['raceId'] == context.race_id_to_predict].empty
+
     def _with_driver_age(self, raw_data: F1DbRawData, race_date: date) -> F1DbRawData:
         drivers = raw_data.drivers.copy()
         drivers['driver_age'] = (pd.to_datetime(race_date) - drivers['dateOfBirth']) / pd.Timedelta(days=365.25)
