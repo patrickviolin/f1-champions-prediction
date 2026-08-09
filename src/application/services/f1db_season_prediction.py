@@ -1,6 +1,7 @@
 from dataclasses import replace
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 from pandas import DataFrame, Series
@@ -28,6 +29,15 @@ F1_POINTS_BY_POSITION = {
 }
 
 DEFAULT_CURRENT_FORM_WEIGHT = 0.0
+INACTIVE_PREVIOUS_SEASON_SCORE_PENALTY = 0.20
+INACTIVE_WITH_UNKNOWN_CONSTRUCTOR_SCORE_PENALTY = 0.60
+PREVIOUS_SEASON_DRIVER_SCORE_WEIGHT = 1.40
+PREVIOUS_SEASON_CONSTRUCTOR_SCORE_WEIGHT = 0.80
+PREVIOUS_SEASON_POSITION_BONUSES = {
+    1: 0.60,
+    2: 0.30,
+    3: 0.20,
+}
 
 POST_QUALIFYING_FEATURE_ORDER = [
     'driver_age',
@@ -296,7 +306,7 @@ def _future_driver_points(future_predictions: DataFrame) -> DataFrame:
     )
 
 
-def _future_constructor_points(future_predictions: DataFrame) -> DataFrame:
+def _future_constructor_points(future_predictions: DataFrame) -> DataFrame | None | Series[Any]:
     if future_predictions.empty:
         return DataFrame(columns=['constructor_ref', 'future_points'])
 
@@ -321,15 +331,8 @@ def _combine_driver_standings(
         how='outer',
         validate='many_to_many'
     )
-    standings['current_points'] = standings['current_points'].fillna(0.0)
-    standings['future_points'] = standings['future_points'].fillna(0.0)
-    standings['future_points'] = _apply_current_form_adjustment(
-        current_points=standings['current_points'],
-        ml_future_points=standings['future_points'],
-        future_races_count=_future_races_count(future_predictions),
-        completed_races_count=completed_races_count,
-        current_form_weight=current_form_weight,
-    )
+    setup_current_and_future_points(completed_races_count, current_form_weight, future_predictions, standings)
+
     standings['constructor_ref'] = standings['constructor_ref'].fillna(standings['future_constructor_ref'])
     standings['season_points'] = standings['current_points'] + standings['future_points']
     standings = standings.sort_values(by='season_points', ascending=False).reset_index(drop=True)
@@ -368,15 +371,7 @@ def _combine_constructor_standings(
         how='outer',
         validate='many_to_many'
     )
-    standings['current_points'] = standings['current_points'].fillna(0.0)
-    standings['future_points'] = standings['future_points'].fillna(0.0)
-    standings['future_points'] = _apply_current_form_adjustment(
-        current_points=standings['current_points'],
-        ml_future_points=standings['future_points'],
-        future_races_count=_future_races_count(future_predictions),
-        completed_races_count=completed_races_count,
-        current_form_weight=current_form_weight,
-    )
+    setup_current_and_future_points(completed_races_count, current_form_weight, future_predictions, standings)
     standings['constructor_points'] = standings['current_points'] + standings['future_points']
     standings = standings.sort_values(by='constructor_points', ascending=False).reset_index(drop=True)
     standings['standing_position'] = standings.index + 1
@@ -399,6 +394,19 @@ def _combine_constructor_standings(
     ).rename(columns={'future_points': 'predicted_points', 'name': 'constructor_name'}).drop(columns='id')
 
 
+def setup_current_and_future_points(completed_races_count: int, current_form_weight: float,
+                                    future_predictions: DataFrame, standings: DataFrame):
+    standings['current_points'] = standings['current_points'].fillna(0.0)
+    standings['future_points'] = standings['future_points'].fillna(0.0)
+    standings['future_points'] = _apply_current_form_adjustment(
+        current_points=standings['current_points'],
+        ml_future_points=standings['future_points'],
+        future_races_count=_future_races_count(future_predictions),
+        completed_races_count=completed_races_count,
+        current_form_weight=current_form_weight,
+    )
+
+
 def _future_races_count(future_predictions: DataFrame) -> int:
     if future_predictions.empty:
         return 0
@@ -407,11 +415,11 @@ def _future_races_count(future_predictions: DataFrame) -> int:
 
 
 def _apply_current_form_adjustment(
-    current_points: Series,
-    ml_future_points: Series,
-    future_races_count: int,
-    completed_races_count: int,
-    current_form_weight: float,
+        current_points: Series,
+        ml_future_points: Series,
+        future_races_count: int,
+        completed_races_count: int,
+        current_form_weight: float,
 ) -> Series:
     if completed_races_count == 0 or future_races_count == 0 or current_form_weight == 0:
         return ml_future_points
@@ -495,10 +503,10 @@ class F1DbSeasonPrediction:
         return categories
 
     def predict_season_standings(
-        self,
-        season_year: int,
-        use_current_results: bool = False,
-        current_form_weight: float = DEFAULT_CURRENT_FORM_WEIGHT,
+            self,
+            season_year: int,
+            use_current_results: bool = False,
+            current_form_weight: float = DEFAULT_CURRENT_FORM_WEIGHT,
     ) -> tuple[DataFrame, DataFrame]:
         raw_data = self.loader.load()
 
@@ -538,10 +546,10 @@ class F1DbSeasonPrediction:
         return driver_standings, constructor_standings
 
     def _predict_season_standings_from_current_results(
-        self,
-        season_year: int,
-        raw_data: F1DbRawData,
-        current_form_weight: float,
+            self,
+            season_year: int,
+            raw_data: F1DbRawData,
+            current_form_weight: float,
     ) -> tuple[DataFrame, DataFrame]:
         completed_races_count = len(_completed_race_ids(season_year, raw_data))
         future_predictions = self._predict_season_races(
@@ -623,6 +631,13 @@ class F1DbSeasonPrediction:
                 )
                 race_predictions = self._predict_pre_qualifying_race(race, race_features)
 
+                if not use_best_available_model:
+                    race_predictions = self._apply_preseason_calibration(
+                        season_year=season_year,
+                        raw_data=raw_data,
+                        race_predictions=race_predictions,
+                    )
+
             predictions.append(race_predictions)
 
             if use_best_available_model:
@@ -640,10 +655,10 @@ class F1DbSeasonPrediction:
         return pd.concat(predictions, ignore_index=True)
 
     def _initial_simulated_race_results(
-        self,
-        season_year: int,
-        raw_data: F1DbRawData,
-        use_best_available_model: bool,
+            self,
+            season_year: int,
+            raw_data: F1DbRawData,
+            use_best_available_model: bool,
     ) -> DataFrame:
         if use_best_available_model:
             return raw_data.race_results.copy()
@@ -651,10 +666,10 @@ class F1DbSeasonPrediction:
         return raw_data.race_results[raw_data.race_results['year'] != season_year].copy()
 
     def _initial_simulated_qualifying(
-        self,
-        season_year: int,
-        raw_data: F1DbRawData,
-        use_best_available_model: bool,
+            self,
+            season_year: int,
+            raw_data: F1DbRawData,
+            use_best_available_model: bool,
     ) -> DataFrame:
         if use_best_available_model:
             return raw_data.qualifying.copy()
@@ -686,11 +701,11 @@ class F1DbSeasonPrediction:
         ]
 
     def _build_pre_qualifying_race_features(
-        self,
-        raw_data: F1DbRawData,
-        race_date: date,
-        race_results: DataFrame,
-        qualifying: DataFrame,
+            self,
+            raw_data: F1DbRawData,
+            race_date: date,
+            race_results: DataFrame,
+            qualifying: DataFrame,
     ) -> DataFrame:
         raw_data = _with_driver_age(raw_data, race_date)
         raw_data = replace(raw_data, race_results=race_results, qualifying=qualifying)
@@ -707,7 +722,7 @@ class F1DbSeasonPrediction:
         )
 
     def _predict_post_qualifying_race(self, race: Series, raw_data: F1DbRawData) -> DataFrame:
-        request = self.f1db_data_to_ml_schema.build_request(pd.to_datetime(race['date']).date())
+        request = self.f1db_data_to_ml_schema.build_request(pd.to_datetime(race['date']).date)
         drivers_data = [driver.model_dump() for driver in request.grid_data]
         df_input = pd.DataFrame(drivers_data)
 
@@ -725,6 +740,124 @@ class F1DbSeasonPrediction:
             driver_refs=driver_refs,
             constructor_refs=constructor_refs,
             scores=scores,
+        )
+
+    def _apply_preseason_calibration(
+            self,
+            season_year: int,
+            raw_data: F1DbRawData,
+            race_predictions: DataFrame,
+    ) -> DataFrame:
+        previous_season_driver_races = self._previous_season_driver_race_counts(season_year, raw_data)
+        previous_driver_strength = self._previous_season_driver_strength(season_year, raw_data)
+        previous_constructor_strength = self._previous_season_constructor_strength(season_year, raw_data)
+        known_constructors = set(f1db_utils.load_mappings()['constructors'])
+        race_predictions = race_predictions.copy()
+
+        race_predictions['penalty'] = race_predictions.apply(
+            lambda row: self._preseason_roster_penalty(
+                driver_ref=row['driver_ref'],
+                constructor_ref=row['constructor_ref'],
+                previous_season_driver_races=previous_season_driver_races,
+                known_constructors=known_constructors,
+            ),
+            axis=1,
+        )
+        race_predictions['previous_season_boost'] = race_predictions.apply(
+            lambda row: self._previous_season_boost(
+                driver_ref=row['driver_ref'],
+                constructor_ref=row['constructor_ref'],
+                previous_driver_strength=previous_driver_strength,
+                previous_constructor_strength=previous_constructor_strength,
+            ),
+            axis=1,
+        )
+        race_predictions['predicted_score'] = (
+                race_predictions['predicted_score']
+                + race_predictions['previous_season_boost']
+                - race_predictions['penalty']
+        )
+        race_predictions = race_predictions.drop(columns=['penalty', 'previous_season_boost'])
+        race_predictions = race_predictions.sort_values(by='predicted_score', ascending=False).reset_index(drop=True)
+        race_predictions['predicted_position'] = race_predictions.index + 1
+
+        return race_predictions
+
+    def _previous_season_driver_race_counts(self, season_year: int, raw_data: F1DbRawData) -> Series:
+        previous_season_results = raw_data.race_results[raw_data.race_results['year'] == season_year - 1]
+        return previous_season_results.groupby('driverId')['raceId'].nunique()
+
+    def _preseason_roster_penalty(
+            self,
+            driver_ref: str,
+            constructor_ref: str,
+            previous_season_driver_races: Series,
+            known_constructors: set[str],
+    ) -> float:
+        if previous_season_driver_races.get(driver_ref, 0) > 0:
+            return 0.0
+
+        if constructor_ref not in known_constructors:
+            return INACTIVE_WITH_UNKNOWN_CONSTRUCTOR_SCORE_PENALTY
+
+        return INACTIVE_PREVIOUS_SEASON_SCORE_PENALTY
+
+    def _previous_season_driver_strength(self, season_year: int, raw_data: F1DbRawData) -> DataFrame:
+        previous_standings = raw_data.race_driver_standings[
+            raw_data.race_driver_standings['year'] == season_year - 1
+            ].copy()
+
+        if previous_standings.empty:
+            return DataFrame(columns=['driver_ref', 'driver_score_boost'])
+
+        previous_standings = previous_standings[previous_standings['round'] == previous_standings['round'].max()]
+        max_points = previous_standings['points'].max() or 1
+        previous_standings['driver_score_boost'] = (
+                (previous_standings['points'] / max_points) * PREVIOUS_SEASON_DRIVER_SCORE_WEIGHT
+                + previous_standings['positionDisplayOrder'].map(PREVIOUS_SEASON_POSITION_BONUSES).fillna(0.0)
+        )
+
+        return previous_standings.rename(columns={'driverId': 'driver_ref'})[
+            ['driver_ref', 'driver_score_boost']
+        ]
+
+    def _previous_season_constructor_strength(self, season_year: int, raw_data: F1DbRawData) -> DataFrame:
+        previous_standings = raw_data.race_constructor_standings[
+            raw_data.race_constructor_standings['year'] == season_year - 1
+            ].copy()
+
+        if previous_standings.empty:
+            return DataFrame(columns=['constructor_ref', 'constructor_score_boost'])
+
+        previous_standings = previous_standings[previous_standings['round'] == previous_standings['round'].max()]
+        max_points = previous_standings['points'].max() or 1
+        previous_standings['constructor_score_boost'] = (
+                                                                previous_standings['points'] / max_points
+                                                        ) * PREVIOUS_SEASON_CONSTRUCTOR_SCORE_WEIGHT
+
+        return previous_standings.rename(columns={'constructorId': 'constructor_ref'})[
+            ['constructor_ref', 'constructor_score_boost']
+        ]
+
+    def _previous_season_boost(
+            self,
+            driver_ref: str,
+            constructor_ref: str,
+            previous_driver_strength: DataFrame,
+            previous_constructor_strength: DataFrame,
+    ) -> float:
+        driver_boost = previous_driver_strength.loc[
+            previous_driver_strength['driver_ref'] == driver_ref,
+            'driver_score_boost',
+        ]
+        constructor_boost = previous_constructor_strength.loc[
+            previous_constructor_strength['constructor_ref'] == constructor_ref,
+            'constructor_score_boost',
+        ]
+
+        return float(
+            (driver_boost.iloc[0] if not driver_boost.empty else 0.0)
+            + (constructor_boost.iloc[0] if not constructor_boost.empty else 0.0)
         )
 
     def _constructor_refs_for_race(self, raw_data: F1DbRawData, race_id: object, driver_refs: Series) -> Series:

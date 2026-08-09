@@ -56,7 +56,11 @@ class RacePredictionByDateRequest(BaseModel):
 
 class SeasonPredictionRequest(BaseModel):
     """Request used to predict a full season."""
-    year: int
+    year: int = Field(
+        ...,
+        ge=2025,
+        description='Year of the season. Do not use 2024 or before, since it was used to train the model.'
+    )
     use_current_results: bool = Field(
         default=False,
         description='Use official results for completed races and predict only future races',
