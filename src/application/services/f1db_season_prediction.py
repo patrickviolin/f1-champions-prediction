@@ -722,7 +722,7 @@ class F1DbSeasonPrediction:
         )
 
     def _predict_post_qualifying_race(self, race: Series, raw_data: F1DbRawData) -> DataFrame:
-        request = self.f1db_data_to_ml_schema.build_request(pd.to_datetime(race['date']).date)
+        request = self.f1db_data_to_ml_schema.build_request(pd.to_datetime(race['date']).date())
         drivers_data = [driver.model_dump() for driver in request.grid_data]
         df_input = pd.DataFrame(drivers_data)
 
