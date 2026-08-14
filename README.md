@@ -115,6 +115,7 @@ The file `src/test/test_f1db_supporting_services.py` covers the F1DB supporting 
 - Historical training and test data are stored in `train_and_test_data/`.
 - F1DB validation and date-based prediction data are stored in `validation_data/01_raw/`.
 - `config/mapping_circuit_and_constructor.json` maps constructors and circuits to model IDs.
+- The models were trained and tested using the [Ergast F1 DB](https://www.kaggle.com/datasets/rohanrao/formula-1-world-championship-1950-2020). Validation data from a separate dataset ([F1DB](https://github.com/f1db/f1db)) was used to simulate a production scenario, where inference data differs from the data used for model training and testing.
 
 ---
 
@@ -233,5 +234,6 @@ O arquivo `src/test/test_f1db_supporting_services.py` cobre os serviços de apoi
 - Os dados históricos de treino e teste ficam em `train_and_test_data/`.
 - Os dados F1DB de validação e predição por data ficam em `validation_data/01_raw/`.
 - O arquivo `config/mapping_circuit_and_constructor.json` mapeia construtores e circuitos para IDs usados pelo modelo.
+- Os modelos foram treinados e testados utilizando o [Ergast F1 DB](https://www.kaggle.com/datasets/rohanrao/formula-1-world-championship-1950-2020). Dessa forma, foi utilizado dados de validação provenientes de outra base ([F1 DB](https://github.com/f1db/f1db)) para simular um cenário de produção, no qual os dados de inferência diferem dos dados usados para treinamento e testes do modelo.
 
 ---
